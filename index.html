@@ -13,7 +13,7 @@
 <link rel="manifest" href="./2-manifest.webmanifest">
 <title>Tankbuch</title>
 <script>
-const APP_VERSION = '3.7';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '3.8';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -142,8 +142,26 @@ input[type=date]{background:transparent;border:0;outline:0;font-size:17px;font-w
 .tabelle td:last-child,.tabelle th:last-child{padding-right:12px} .tabelle tr:last-child td{border-bottom:0}
 .tabelle td.hi{color:var(--o1);font-weight:700} .tabelle tbody tr:active{background:var(--karte-2)}
 .tabelle th:last-child,.tabelle td.weg{width:34px;padding-left:0;padding-right:6px}
-.muell{display:grid;place-items:center;width:32px;height:32px;margin-left:auto;color:var(--warn);opacity:.75;border-radius:8px}
-.muell svg{width:17px;height:17px} .muell:active{background:rgba(255,107,107,.15);opacity:1}
+.stift{display:grid;place-items:center;width:28px;height:28px;margin-left:auto;color:var(--o2);opacity:.7}
+.stift svg{width:15px;height:15px}
+tr.editor td{padding:0 8px 10px;border-bottom:1px solid var(--line)}
+.ed{background:var(--karte-2);border:1px solid rgba(255,140,26,.35);border-radius:14px;padding:12px 12px 10px}
+.ed-raster{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.ed-feld{display:block} .ed-feld > span:first-child{display:block;font-size:11.5px;color:var(--muted);margin-bottom:3px}
+.ed-eingabe{display:flex;align-items:baseline;gap:5px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.ed-eingabe input{width:100%;min-width:0;background:transparent;border:0;outline:0;font-size:16px;font-weight:600;text-align:right;color:var(--text)}
+.ed-eingabe input[type=date]{text-align:left;font-weight:600;-webkit-appearance:none;appearance:none;color:var(--text);padding:0}
+.ed-eingabe i{font-style:normal;color:var(--muted);font-size:13px;flex:none}
+.ed-voll{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;cursor:pointer}
+.ed-voll input{position:absolute;opacity:0;width:0;height:0}
+.ed-voll .kasten{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--muted);display:grid;place-items:center;flex:none}
+.ed-voll input:checked + .kasten{background:linear-gradient(135deg,var(--o1),var(--o2));border-color:transparent}
+.ed-voll input:checked + .kasten::after{content:"";width:5px;height:10px;border:solid var(--o-ink);border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg)}
+.ed-knoepfe{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px}
+.ed-knoepfe button{font-size:15px;font-weight:600;padding:9px 14px;border-radius:11px;color:var(--text);background:rgba(255,255,255,.06)}
+.ed-rechts{display:flex;gap:8px}
+.ed-loeschen{color:var(--warn) !important;background:transparent !important;padding-left:4px !important}
+.ed-speichern{background:linear-gradient(135deg,var(--o1),var(--o2)) !important;color:var(--o-ink) !important}
 .tabelle td{padding:10px 5px}
 i.teil{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--o2);margin-left:6px;vertical-align:1px}
 .fuss{color:var(--muted);font-size:12px;margin:8px 4px 0;display:flex;justify-content:space-between;gap:12px;align-items:center}
@@ -213,7 +231,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v3.7</span></h1>
+    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v3.8</span></h1>
     <p class="fahrzeug" id="fahrzeug"></p>
   </div>
   <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen"><img data-bild="15-zahnrad.png" alt=""></button>
@@ -300,7 +318,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
       <div id="chart-monate"></div>
     </div>
     <p class="legende" id="legende-monate"></p>
-    <h3 id="tabelle-titel">Letzte Tankungen <span class="klein">antippen = ändern · 🗑 = löschen</span></h3>
+    <h3 id="tabelle-titel">Letzte Tankungen <span class="klein">Zeile antippen = bearbeiten</span></h3>
     <div class="fuss oben" id="fuss-oben"><span class="legende-teil"><i class="teil"></i>Teilbetankung</span><button type="button" class="tabelle-alle" id="tabelle-alle-oben" hidden></button></div>
     <div class="liste"><table class="tabelle"><thead><tr><th>Datum</th><th>l</th><th>€</th><th>km</th><th>l/100</th><th>€/l</th><th></th></tr></thead><tbody id="tabelle-koerper"></tbody></table></div>
     <div class="fuss" id="fuss-unten" hidden><span class="legende-teil"><i class="teil"></i>Teilbetankung</span><button type="button" class="tabelle-alle" id="tabelle-alle"></button></div>
@@ -694,7 +712,7 @@ function isoAusTag(n){ return new Date(n * MS_TAG).toISOString().slice(0, 10); }
 function monatVon(iso){ return iso.slice(0, 7); }
 function naechsterMonat(ym){ let [j, m] = ym.split('-').map(Number); m++; if (m > 12){ m = 1; j++; } return j + '-' + String(m).padStart(2, '0'); }
 function tageImMonat(ym){ const [j, m] = ym.split('-').map(Number); return new Date(Date.UTC(j, m, 0)).getUTCDate(); }
-let tabelleAlle = false, beispiel = false;
+let tabelleAlle = false, beispiel = false, zeileOffen = null;
 // Beispiel-Historie: 24 Monate, etwa zwei Tankungen je Monat (~40 l), feste Zufallsfolge, relativ zu heute.
 // Literpreise = ADAC-Monatsdurchschnitt Super E10 (adac.de, Kraftstoffpreisentwicklung, Stand 01.09.2026) ± wenige Cent.
 const SPRIT_MONAT = {
@@ -835,6 +853,22 @@ function chartMonate(monate, werteMap){
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">' + svg + '</svg>';
 }
 
+// Aufklappbarer Editor direkt unter der angetippten Tabellenzeile
+function zeilenEditor(e){
+  const feld = (id, label, wert, mode, einheit) => '<label class="ed-feld"><span>' + label + '</span><span class="ed-eingabe"><input id="' + id + '" type="text" inputmode="' + mode + '" value="' + esc(wert) + '"><i>' + einheit + '</i></span></label>';
+  const stand = e.stand != null;
+  return '<tr class="editor"><td colspan="7"><div class="ed">' +
+    '<div class="ed-raster">' +
+    '<label class="ed-feld"><span>Datum</span><span class="ed-eingabe"><input id="ed-datum" type="date" value="' + esc(e.datum) + '"></span></label>' +
+    feld('ed-liter', 'Getankt', fmt(e.liter, 2), 'decimal', 'l') +
+    feld('ed-preis', 'Bezahlt', fmt(e.preis, 2), 'decimal', '€') +
+    (stand ? feld('ed-stand', 'Kilometerstand', fmt(e.stand, 0), 'numeric', 'km') : feld('ed-km', 'Gefahren', e.km > 0 ? fmt(e.km, 0) : '', 'decimal', 'km')) +
+    '</div>' +
+    '<label class="ed-voll"><input type="checkbox" id="ed-voll"' + (e.voll ? ' checked' : '') + '><span class="kasten"></span>Voll getankt</label>' +
+    '<div class="ed-knoepfe"><button type="button" class="ed-loeschen" data-ed="loeschen">Löschen</button>' +
+    '<span class="ed-rechts"><button type="button" data-ed="abbrechen">Abbrechen</button><button type="button" class="ed-speichern" data-ed="speichern">Speichern</button></span></div>' +
+    '</div></td></tr>';
+}
 function renderHistorie(){
   const quelle = beispiel ? beispielEintraege() : eintraege;
   const { s, werte } = auswerten(quelle);
@@ -898,8 +932,8 @@ function renderHistorie(){
     return '<tr data-id="' + esc(e.id) + '"><td>' + datumMini(e.datum) + (e.voll ? '' : '<i class="teil" title="Teilbetankung"></i>') + '</td>' +
       '<td>' + fmt(e.liter, 1) + '</td><td>' + fmt(e.preis, 2) + '</td><td>' + (e.km > 0 ? fmt(e.km, 0) : '–') + '</td>' +
       '<td class="hi">' + (r.verbrauch != null ? fmt(r.verbrauch, 1) : '–') + '</td><td>' + fmt(r.literpreis, 3) + '</td>' +
-      '<td class="weg"><button type="button" class="muell" data-weg="' + esc(e.id) + '" aria-label="Eintrag vom ' + datumKurz(e.datum) + ' löschen">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v7M14 10v7"/></svg></button></td></tr>';
+      '<td class="weg"><span class="stift" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.3V21h3.7L17.6 10.1l-3.7-3.7L3 17.3zm17.7-10.2a1 1 0 0 0 0-1.4l-2.4-2.4a1 1 0 0 0-1.4 0l-1.8 1.8 3.7 3.7 1.9-1.7z"/></svg></span></td></tr>' +
+      (zeileOffen === e.id ? zeilenEditor(e) : '');
   }).join('');
   const text = tabelleAlle ? 'nur die letzten 10 ›' : 'alle ' + s.length + ' anzeigen ›';
   const oben = $('tabelle-alle-oben'); oben.hidden = s.length <= 10; oben.textContent = text;
@@ -914,21 +948,36 @@ document.querySelectorAll('.tabelle-alle').forEach(b => b.addEventListener('clic
 }));
 $('btn-beispiel').addEventListener('click', () => { beispiel = !beispiel; tabelleAlle = false; renderHistorie(); window.scrollTo(0, 0); });
 $('tabelle-koerper').addEventListener('click', ev => {
-  const weg = ev.target.closest('button[data-weg]');
-  const tr = ev.target.closest('tr[data-id]'); if (!tr && !weg) return;
-  if (beispiel){ showInfo('Beispieldaten lassen sich nicht ändern', 2, weg || tr); return; }
-  const id = weg ? weg.dataset.weg : tr.dataset.id;
-  const e = eintraege.find(x => x.id === id); if (!e) return;
-  if (weg){
+  const knopf = ev.target.closest('button[data-ed]');
+  if (knopf){ editorAktion(knopf.dataset.ed, knopf); return; }
+  if (ev.target.closest('tr.editor')) return;                       // Tippen im Editor selbst
+  const tr = ev.target.closest('tr[data-id]'); if (!tr) return;
+  if (beispiel){ showInfo('Beispieldaten lassen sich nicht ändern', 2, tr); return; }
+  zeileOffen = zeileOffen === tr.dataset.id ? null : tr.dataset.id;   // zweiter Tipp klappt wieder zu
+  renderHistorie();
+  if (zeileOffen){ const ed = document.querySelector('tr.editor'); if (ed) ed.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+});
+function editorAktion(was, knopf){
+  const e = eintraege.find(x => x.id === zeileOffen); if (!e) return;
+  if (was === 'abbrechen'){ zeileOffen = null; renderHistorie(); return; }
+  if (was === 'loeschen'){
     if (!confirm('Eintrag vom ' + datumKurz(e.datum) + ' löschen?\n' + fmt(e.liter, 2) + ' l · ' + fmt(e.preis, 2) + ' €')) return;
-    eintraege = eintraege.filter(x => x.id !== id);
-    if (bearbeite === id) formularLeeren();
-    speichere(SCHL.eintraege, eintraege); render(); renderHistorie(); showInfo('Eintrag gelöscht', 2, weg);
+    eintraege = eintraege.filter(x => x.id !== e.id);
+    if (bearbeite === e.id) formularLeeren();
+    zeileOffen = null; speichere(SCHL.eintraege, eintraege); render(); renderHistorie(); showInfo('Eintrag gelöscht', 2, knopf);
     return;
   }
-  formularFuellen(e); render(); zeigeSeite('seite-start');
-  setTimeout(() => showInfo('Eintrag vom ' + datumKurz(e.datum) + ' wird bearbeitet', 3), 400);
-});
+  // speichern
+  const neu = { datum: $('ed-datum').value || e.datum, liter: parseZahl($('ed-liter').value), preis: parseZahl($('ed-preis').value), voll: $('ed-voll').checked };
+  if ($('ed-stand')) neu.stand = parseZahl($('ed-stand').value); else neu.km = parseZahl($('ed-km').value);
+  if (!(neu.liter > 0)) return showInfo('Getankte Liter fehlen', 3, knopf);
+  if (!(neu.preis > 0)) return showInfo('Bezahlter Preis fehlt', 3, knopf);
+  if ($('ed-stand') ? !(neu.stand > 0) : !(neu.km > 0)) return showInfo('Kilometer fehlen', 3, knopf);
+  Object.assign(e, neu);
+  auswerten(eintraege); speichere(SCHL.eintraege, eintraege);
+  if (bearbeite === e.id) formularFuellen(e);                         // Startseite zeigt denselben Eintrag: nachziehen
+  zeileOffen = null; render(); renderHistorie(); showInfo('Änderung gespeichert', 2, knopf);
+}
 
 // ---------- Daten ----------
 $('btn-export').addEventListener('click', async () => {
