@@ -1,6 +1,8 @@
 // Tankbuch – Service Worker: eigene Dateien Netz zuerst, fremde (Schriften) Cache zuerst.
-const CACHE = 'tankbuch-v2';
-const ASSETS = ['./', './index.html', './2-manifest.webmanifest', './3-icon.png', './4-icon-180.png'];
+const CACHE = 'tankbuch-v4';
+const ASSETS = ['./', './index.html', './2-manifest.webmanifest', './3-icon.png', './4-icon-180.png',
+  './5-hintergrund.jpg', './6-karte-verbrauch.jpg', './7-karte-graphit.jpg', './8-knopf.jpg',
+  './9-zapfsaeule.png', './10-kalender.png', './11-euro.png', './12-strasse.png', './13-tropfen.png', './14-historie.png', './15-zahnrad.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(() => {}));

@@ -4,141 +4,163 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0f1013">
+<meta name="theme-color" content="#0e0f14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tankbuch">
 <link rel="apple-touch-icon" sizes="180x180" href="./4-icon-180.png">
 <link rel="icon" sizes="512x512" href="./3-icon.png">
 <link rel="manifest" href="./2-manifest.webmanifest">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <title>Tankbuch</title>
 <script>
-const APP_VERSION = '1.6';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '1.9';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
-  --bg:#0f1013; --panel:#16181d; --panel-2:#1d2026; --line:#2a2e37;
-  --text:#f2f2f5; --muted:#8e929c; --accent:#f5c518; --accent-ink:#1a1400;
-  --ok:#34c759; --warn:#ff6b6b;
-  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-  --r:16px; --sk:1;            /* --sk: Platzfaktor, von passeGroesseAn() gesetzt */
+  --bg:#0e0f14; --karte:#181a21; --karte-2:#1f222b; --line:#2b2f3a;
+  --text:#f3f4f7; --muted:#8b8f9c;
+  --o1:#ffb43d; --o2:#ff7a18; --o-ink:#2a1500; --o-weich:rgba(255,138,26,.14);
+  --warn:#ff6b6b;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --r:20px; --sk:1;            /* --sk: Platzfaktor, von passeGroesseAn() gesetzt */
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{background:var(--bg);-webkit-text-size-adjust:100%;overscroll-behavior:none}
+html{background:var(--bg) url(./5-hintergrund.jpg) center top / cover no-repeat;-webkit-text-size-adjust:100%;overscroll-behavior:none;min-height:100%}
 /* .fest: Seite passt vollständig – Scrollen und Gummiband-Effekt aus */
 html.fest, html.fest body{height:100%;overflow:hidden;touch-action:pan-x}
-body{background:var(--bg);color:var(--text);font:400 17px/1.4 var(--sans);
+body{background:transparent;color:var(--text);font:400 17px/1.4 var(--sans);font-variant-numeric:tabular-nums;
   padding:calc(env(safe-area-inset-top) + 4px + 6px * var(--sk)) 16px calc(env(safe-area-inset-bottom) + 6px + 8px * var(--sk));
   max-width:560px;margin:0 auto}
-button,input{font:inherit;color:inherit}
+button,input{font:inherit;color:inherit;font-variant-numeric:tabular-nums}
 button{background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
-button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:focus-visible,input:focus-visible{outline:2px solid var(--o1);outline-offset:2px}
 [hidden]{display:none !important}
-.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+svg{display:block;flex:none}
 
 /* Kopf */
-.kopf{display:flex;justify-content:space-between;align-items:flex-start;padding:2px 2px calc(14px * var(--sk))}
-.kopf h1{font-size:calc(21px + 5px * var(--sk));font-weight:600;letter-spacing:-.01em;line-height:1.1}
-.version{font:500 12px var(--mono);color:var(--muted);text-decoration:underline dotted;text-underline-offset:3px;margin-left:8px;vertical-align:3px;cursor:pointer}
-.fahrzeug{color:var(--muted);font-size:14px;margin-top:4px}
-.kopf-rechts{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-.heute{font:500 14px var(--mono);color:var(--muted);white-space:nowrap}
-.zahnrad{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--muted);background:var(--panel)}
-.zahnrad svg{width:18px;height:18px}
+.kopf{display:flex;justify-content:space-between;align-items:center;padding:2px 2px calc(12px * var(--sk))}
+.kopf h1{font-size:calc(22px + 5px * var(--sk));font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.version{font-size:12px;font-weight:500;color:var(--muted);text-decoration:underline dotted;text-underline-offset:3px;margin-left:7px;vertical-align:3px;cursor:pointer}
+.fahrzeug{color:var(--muted);font-size:15px;margin-top:2px}
+.zahnrad{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#2a2e38;border:1px solid rgba(255,255,255,.06)}
+/* Asset 11 (Zahnrad) war dunkelgrau – auf dem dunklen Knopf unsichtbar; Form beibehalten, Farbe auf Hellgrau gesetzt */
+.zahnrad img{display:block;width:22px;height:22px}
 
-/* Anzeige (Live-Auswertung) */
-.anzeige{background:var(--panel);border-radius:var(--r);padding:calc(18px * var(--sk)) 18px calc(13px * var(--sk))}
-.anzeige .haupt{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-.anzeige .haupt .zahl{font:600 calc(28px + 32px * var(--sk))/1 var(--mono);color:var(--accent);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.anzeige .einheit{color:var(--muted);font-size:14px}
-.anzeige .neben{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:calc(14px * var(--sk));padding-top:calc(12px * var(--sk));border-top:1px solid var(--line)}
-.anzeige .neben .zahl{display:block;font:500 calc(17px + 9px * var(--sk))/1.1 var(--mono);font-variant-numeric:tabular-nums}
-.anzeige .neben .einheit{display:block;margin-top:2px}
-.hinweis{margin-top:calc(10px * var(--sk));font-size:13px;color:var(--muted);min-height:16px}
+/* Kachel Verbrauch */
+.held{position:relative;overflow:hidden;border-radius:var(--r);
+  background:var(--karte) url(./6-karte-verbrauch.jpg) center / cover no-repeat;
+  border:1px solid rgba(255,138,26,.30);padding:calc(13px * var(--sk)) 18px calc(12px * var(--sk))}
+/* geschwungene Flächen: von den unteren Seiten nach innen, Mitte hinter der Zahl dunkel */
+.held::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(60% 55% at -8% 108%, rgba(255,140,30,.40), transparent 70%),
+    radial-gradient(60% 55% at 108% 108%, rgba(255,140,30,.34), transparent 70%)}
+.held > *{position:relative}
+.held-kopf{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.held-titel{font-size:17px;font-weight:600}
+.held-marke{font-size:13px;color:var(--muted);text-align:right}
+.held-zahl{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:calc(6px * var(--sk))}
+.held-zahl img{width:calc(26px + 18px * var(--sk));height:calc(26px + 18px * var(--sk))}
+.held-zahl .zahl{font-size:calc(34px + 30px * var(--sk));font-weight:700;letter-spacing:-.03em;line-height:1}
+.held-einheit{text-align:center;color:#d9dbe1;font-size:16px;margin-top:2px}
+.held-fuss{display:flex;align-items:center;gap:10px;margin-top:calc(9px * var(--sk));padding-top:calc(9px * var(--sk));border-top:1px solid rgba(255,255,255,.10)}
+.stat{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 2px;border-radius:12px}
+.stat img{width:24px;height:24px}
+.stat b{font-size:calc(16px + 3px * var(--sk));font-weight:700}
+.stat span{font-size:13px;color:var(--muted)}
+.stat:active{background:rgba(255,255,255,.05)}
+.held-fuss .trenner{width:1px;align-self:stretch;background:rgba(255,255,255,.12)}
+.hinweis{margin-top:calc(7px * var(--sk));font-size:13px;color:var(--muted);text-align:center;min-height:16px}
 .hinweis.warn{color:var(--warn)}
-.segment{display:inline-flex;background:var(--panel-2);border-radius:10px;padding:3px;gap:2px}
-.segment button{padding:calc(4px + 2px * var(--sk)) 10px;border-radius:8px;font-size:13px;color:var(--muted);white-space:nowrap}
-.segment button.aktiv{background:var(--accent);color:var(--accent-ink);font-weight:600}
-.anzeige .segment{margin-top:calc(9px * var(--sk))}
 
 /* Formular */
-.karte{margin-top:calc(13px * var(--sk));background:var(--panel);border-radius:var(--r);overflow:hidden}
-.zeile{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;min-height:calc(36px + 18px * var(--sk));border-bottom:1px solid var(--line);position:relative}
+.karte{margin-top:calc(12px * var(--sk));background:var(--karte) url(./7-karte-graphit.jpg) center / cover no-repeat;border:1px solid rgba(255,255,255,.07);border-radius:var(--r);overflow:hidden}
+.zeile{display:flex;align-items:center;gap:13px;padding:0 16px;min-height:calc(36px + 18px * var(--sk));border-bottom:1px solid var(--line);position:relative}
 .karte .zeile:last-child{border-bottom:0}
-.zeile:focus-within{background:var(--panel-2)}
-.zeile > span:first-child{font-size:calc(15px + 1px * var(--sk));flex:none}
-.zeile small{display:block;color:var(--muted);font-size:12px;line-height:1.2;font-weight:400}
-.feld{display:flex;align-items:baseline;gap:6px;flex:1;justify-content:flex-end;min-width:0}
+.zeile:focus-within{background:var(--karte-2)}
+.zeile .ikone{width:26px;height:26px;flex:none}
+.zeile .ikone img{width:26px;height:26px;display:block}
+.bez{font-size:calc(15px + 1px * var(--sk));flex:none}
+.bez small{display:block;color:var(--muted);font-size:12px;line-height:1.2}
+.feld{display:flex;align-items:baseline;gap:5px;flex:1;justify-content:flex-end;min-width:0}
 .feld input{width:100%;max-width:170px;text-align:right;background:transparent;border:0;outline:0;
-  font:500 max(16px, calc(19px * var(--sk))) var(--mono);font-variant-numeric:tabular-nums;padding:calc(8px * var(--sk)) 0;min-width:0}
-.feld input.text{font-family:var(--sans);font-size:17px;max-width:200px}
-.feld input::placeholder{color:#4a4e58}
-.feld i{font-style:normal;color:var(--muted);font-size:14px;width:22px;flex:none}
-input[type=date]{background:transparent;border:0;outline:0;font:500 17px var(--mono);color:var(--text);text-align:right;padding:calc(9px * var(--sk)) 0;-webkit-appearance:none;appearance:none}
+  font-size:max(16px, calc(19px * var(--sk)));font-weight:600;padding:calc(8px * var(--sk)) 0;min-width:0}
+.feld input.text{font-weight:400;font-size:17px;max-width:200px}
+.feld input::placeholder{color:#4c505c;font-weight:400}
+.feld i{font-style:normal;color:var(--muted);font-size:14px;width:20px;flex:none}
+input[type=date]{background:transparent;border:0;outline:0;font-size:17px;font-weight:600;color:var(--text);
+  text-align:right;padding:calc(9px * var(--sk)) 0;-webkit-appearance:none;appearance:none;flex:1}
 .schalter input{position:absolute;opacity:0;width:0;height:0}
-.schalter .knopf{width:48px;height:29px;border-radius:15px;background:#3a3e48;position:relative;transition:background .2s;flex:none}
-.schalter .knopf::after{content:"";position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;background:#fff;transition:transform .2s}
-.schalter input:checked + .knopf{background:var(--accent)}
-.schalter input:checked + .knopf::after{transform:translateX(19px)}
-.schalter input:focus-visible + .knopf{outline:2px solid var(--accent);outline-offset:2px}
+.schalter .knopf{width:50px;height:30px;border-radius:15px;background:#3b3f4b;position:relative;transition:background .2s;flex:none;margin-left:auto}
+.schalter .knopf::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s}
+.schalter input:checked + .knopf{background:linear-gradient(135deg,var(--o1),var(--o2))}
+.schalter input:checked + .knopf::after{transform:translateX(20px)}
+.schalter input:focus-visible + .knopf{outline:2px solid var(--o1);outline-offset:2px}
 
+/* Knöpfe */
 .aktionen{display:grid;gap:calc(8px * var(--sk));margin-top:calc(12px * var(--sk))}
-.primaer{background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:17px;padding:calc(9px + 6px * var(--sk));border-radius:14px;width:100%}
-.primaer:active{filter:brightness(.92)}
-.sekundaer{background:var(--panel);color:var(--text);font-weight:500;font-size:17px;padding:calc(8px + 6px * var(--sk));border-radius:14px;width:100%;
-  border:1px solid var(--line);display:flex;justify-content:center;gap:8px;align-items:center}
-.sekundaer:active{background:var(--panel-2)}
+.primaer{background:url(./8-knopf.jpg) center / cover no-repeat;color:var(--o-ink);font-weight:700;font-size:17px;
+  padding:calc(10px + 6px * var(--sk));border-radius:16px;width:100%}
+.primaer:active{filter:brightness(.93)}
+.sekundaer{background:var(--karte) url(./7-karte-graphit.jpg) center / cover no-repeat;border:1px solid rgba(255,255,255,.09);color:var(--text);font-weight:500;font-size:17px;padding:calc(9px + 6px * var(--sk));
+  border-radius:16px;width:100%;display:flex;justify-content:center;gap:9px;align-items:center}
+.sekundaer img{width:24px;height:24px}
+.sekundaer:active{background:var(--karte-2)}
 .gefahr{color:var(--warn)}
-.badge{font:500 13px var(--mono);color:var(--muted);background:var(--panel-2);padding:2px 8px;border-radius:999px}
+.badge{font-size:14px;font-weight:600;color:var(--muted);background:var(--karte-2);padding:2px 9px;border-radius:999px}
 .erklaerung{color:var(--muted);font-size:13px;line-height:1.45;margin:12px 4px 0}
 
-/* Eigene Seiten (Historie, Einstellungen) – immer nur eine davon sichtbar */
+/* Seiten Historie und Einstellungen */
 .blatt{margin:0}
 .blatt-inhalt{max-width:560px;margin:0 auto}
-.blatt-kopf{display:flex;justify-content:flex-start;align-items:baseline;gap:14px;padding:2px 2px 14px}
-.blatt-kopf .zurueck{color:var(--accent);font-weight:600;font-size:17px;padding:6px 6px 6px 0;flex:none}
-.blatt-kopf h2{font-size:22px;font-weight:600}
+.blatt-kopf{display:flex;align-items:baseline;gap:14px;padding:2px 2px 14px}
+.blatt-kopf .zurueck{color:var(--o2);font-weight:600;font-size:17px;padding:6px 6px 6px 0;flex:none}
+.blatt-kopf h2{font-size:22px;font-weight:700;letter-spacing:-.02em}
 .statistik{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.stat{background:var(--panel);border-radius:14px;padding:12px 14px}
-.stat b{display:block;font:500 22px/1.1 var(--mono);font-variant-numeric:tabular-nums}
-.stat span{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+.stat-karte{display:flex;align-items:center;gap:12px;background:var(--karte) url(./7-karte-graphit.jpg) center / cover no-repeat;
+  border:1px solid rgba(255,255,255,.09);border-radius:18px;padding:16px 14px;min-height:88px}
+.stat-karte.hervor{background:var(--karte) url(./6-karte-verbrauch.jpg) center / cover no-repeat;border-color:rgba(255,150,40,.85);
+  box-shadow:0 0 0 1px rgba(255,150,40,.25), 0 6px 22px rgba(255,120,20,.18)}
+.stat-karte img{width:40px;height:40px;flex:none}
+.stat-karte .euro-text{width:40px;text-align:center;font-size:40px;font-weight:700;line-height:1;color:var(--o2);flex:none}
+.stat-karte b{display:block;font-size:24px;font-weight:700;line-height:1.1;white-space:nowrap}
+.stat-karte span{display:block;color:var(--muted);font-size:14px;margin-top:3px}
+.chart .leer .punkt{width:14px;height:14px;border-radius:50%;background:var(--o2);margin:6px auto 12px;box-shadow:0 0 10px rgba(255,140,30,.6)}
 h3{font-size:15px;font-weight:600;margin:22px 2px 8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
-.chart{background:var(--panel);border-radius:14px;padding:10px 8px 6px}
-.chart svg{width:100%;height:auto;display:block;font-family:var(--mono)}
+.chart{background:var(--karte) url(./7-karte-graphit.jpg) center / cover no-repeat;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:10px 8px 6px}
+.chart svg{width:100%;height:auto;display:block;font-family:var(--sans)}
 .chart .leer{color:var(--muted);font-size:14px;padding:18px 8px 22px;text-align:center}
-.liste{list-style:none;background:var(--panel);border-radius:14px;overflow:hidden}
+.liste{list-style:none;background:var(--karte) url(./7-karte-graphit.jpg) center / cover no-repeat;border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow:hidden}
 .liste li{border-bottom:1px solid var(--line)}
 .liste li:last-child{border-bottom:0}
 .eintrag{display:grid;grid-template-columns:1fr auto;gap:3px 12px;padding:12px 14px 10px;width:100%;text-align:left}
 .eintrag-aktionen{display:flex;border-top:1px solid var(--line)}
-.eintrag-aktionen button{flex:1;padding:11px 8px;font-size:15px;font-weight:500;color:var(--accent)}
+.eintrag-aktionen button{flex:1;padding:11px 8px;font-size:15px;font-weight:600;color:var(--o2);display:flex;align-items:center;justify-content:center;gap:8px}
+.eintrag-aktionen svg{width:18px;height:18px}
 .eintrag-aktionen button.gefahr{color:var(--warn)}
 .eintrag-aktionen button + button{border-left:1px solid var(--line)}
-.eintrag-aktionen button:active{background:var(--panel-2)}
-.eintrag .datum{font-weight:600;font-size:15px}
+.eintrag-aktionen button:active{background:var(--karte-2)}
+.eintrag .datum{font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px}
+.eintrag .datum img{width:22px;height:22px}
 .eintrag .tag{font-size:12px;color:var(--muted);margin-left:6px;font-weight:400}
-.eintrag .tag.teil{color:var(--accent)}
-.eintrag .details{grid-column:1 / span 2;color:var(--muted);font:500 13px var(--mono);font-variant-numeric:tabular-nums}
-.eintrag .wert{grid-column:2;grid-row:1;text-align:right;font:500 18px/1.2 var(--mono);font-variant-numeric:tabular-nums;align-self:center;white-space:nowrap}
+.eintrag .tag.teil{color:var(--o1)}
+.eintrag .details{grid-column:1 / span 2;color:var(--muted);font-size:13px}
+.eintrag .wert{grid-column:2;grid-row:1;text-align:right;font-size:20px;font-weight:700;line-height:1.2;align-self:center;white-space:nowrap;color:var(--o1)}
 .eintrag .wert small{display:block;font-size:12px;color:var(--muted);font-weight:400}
 .leer-liste{color:var(--muted);font-size:14px;padding:18px 14px;text-align:center}
+.segment{display:inline-flex;background:var(--karte-2);border-radius:12px;padding:3px;gap:2px}
+.segment button{padding:7px 11px;border-radius:9px;font-size:14px;color:var(--muted);white-space:nowrap}
+.segment button.aktiv{background:linear-gradient(135deg,var(--o1),var(--o2));color:var(--o-ink);font-weight:600}
 
-/* Update-Banner (Baustein 0) */
-.update{
-  position:fixed;left:12px;right:12px;top:max(env(safe-area-inset-top),12px);z-index:30;
+/* Update-Banner */
+.update{position:fixed;left:12px;right:12px;top:max(env(safe-area-inset-top),12px);z-index:30;
   display:flex;align-items:center;justify-content:space-between;gap:12px;
-  background:#34c759;color:#06240e;
-  padding:12px 14px;border-radius:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.5);
-  opacity:0;transition:opacity .35s ease;pointer-events:none;max-width:536px;margin:0 auto
-}
+  background:#34c759;color:#06240e;padding:12px 14px;border-radius:14px;font-weight:600;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);opacity:0;transition:opacity .35s ease;pointer-events:none;max-width:536px;margin:0 auto}
 .update.an{opacity:1;pointer-events:auto}
 .update[hidden]{display:none}
-.update.info{background:#2d2d33;color:#f2f2f7;font-weight:500}
+.update.info{background:#2a2d36;color:#f2f2f7;font-weight:500}
 .update.unten{top:auto;bottom:max(env(safe-area-inset-bottom),12px)}
 .update .btn{width:auto;padding:8px 14px;font-size:15px;background:#06240e;color:#fff;border-radius:10px;font-weight:600;flex:none}
 
@@ -155,48 +177,66 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v1.0</span></h1>
+    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v1.9</span></h1>
     <p class="fahrzeug" id="fahrzeug"></p>
   </div>
-  <div class="kopf-rechts">
-    <div class="heute" id="heute"></div>
-    <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-    </button>
-  </div>
+  <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen"><img src="./15-zahnrad.png" alt=""></button>
 </header>
 
-<section class="anzeige" aria-live="polite">
-  <div class="haupt">
-    <span class="zahl" id="a-verbrauch">–</span>
-    <span class="einheit">Liter auf 100 km</span>
+<section class="held" aria-live="polite">
+  <div class="held-kopf">
+    <span class="held-titel">Verbrauch</span>
+    <span class="held-marke" id="held-marke"></span>
   </div>
-  <div class="neben">
-    <div><span class="zahl" id="a-kosten">–</span><span class="einheit" id="a-kosten-einheit">€ je km</span></div>
-    <div><span class="zahl" id="a-literpreis">–</span><span class="einheit">€ je Liter</span></div>
+  <div class="held-zahl"><img src="./13-tropfen.png" alt="">
+    <span class="zahl" id="a-verbrauch">–</span>
+  </div>
+  <div class="held-einheit">l / 100 km</div>
+  <div class="held-fuss">
+    <button type="button" class="stat" id="stat-kosten" aria-label="Kosten – tippen wechselt die Bezugsgröße"><img src="./12-strasse.png" alt="">
+      <b id="a-kosten">–</b><span id="a-kosten-einheit">€ je km</span>
+    </button>
+    <span class="trenner"></span>
+    <div class="stat"><img src="./9-zapfsaeule.png" alt="">
+      <b id="a-literpreis">–</b><span>€ / l</span>
+    </div>
   </div>
   <div class="hinweis" id="a-hinweis"></div>
-  <div class="segment" id="einheit" role="group" aria-label="Kosten anzeigen je">
-    <button type="button" data-einheit="1">je km</button>
-    <button type="button" data-einheit="10">je 10 km</button>
-    <button type="button" data-einheit="100">je 100 km</button>
-  </div>
 </section>
 
 <form id="formular" autocomplete="off" novalidate>
   <div class="karte">
-    <label class="zeile"><span>Datum</span><input type="date" id="f-datum"></label>
-    <label class="zeile"><span>Getankt</span><span class="feld"><input type="text" inputmode="decimal" id="f-liter" placeholder="0,00"><i>l</i></span></label>
-    <label class="zeile"><span>Bezahlt</span><span class="feld"><input type="text" inputmode="decimal" id="f-preis" placeholder="0,00"><i>€</i></span></label>
-    <label class="zeile" id="z-stand" hidden><span>Kilometerstand</span><span class="feld"><input type="text" inputmode="numeric" id="f-stand" placeholder="0"><i>km</i></span></label>
-    <label class="zeile" id="z-km"><span>Gefahren<small id="km-hilfe">seit dem letzten Tanken</small></span><span class="feld"><input type="text" inputmode="decimal" id="f-km" placeholder="0"><i>km</i></span></label>
-    <label class="zeile schalter"><span>Voll getankt<small>sonst zählt es bis zur nächsten Volltankung</small></span><input type="checkbox" id="f-voll" checked><span class="knopf"></span></label>
+    <label class="zeile">
+      <span class="ikone"><img src="./10-kalender.png" alt=""></span>
+      <span class="bez">Datum</span><input type="date" id="f-datum">
+    </label>
+    <label class="zeile">
+      <span class="ikone"><img src="./9-zapfsaeule.png" alt=""></span>
+      <span class="bez">Getankt</span><span class="feld"><input type="text" inputmode="decimal" id="f-liter" placeholder="0,00"><i>l</i></span>
+    </label>
+    <label class="zeile">
+      <span class="ikone"><img src="./11-euro.png" alt=""></span>
+      <span class="bez">Bezahlt</span><span class="feld"><input type="text" inputmode="decimal" id="f-preis" placeholder="0,00"><i>€</i></span>
+    </label>
+    <label class="zeile" id="z-stand" hidden>
+      <span class="ikone"><img src="./12-strasse.png" alt=""></span>
+      <span class="bez">Kilometerstand</span><span class="feld"><input type="text" inputmode="numeric" id="f-stand" placeholder="0"><i>km</i></span>
+    </label>
+    <label class="zeile" id="z-km">
+      <span class="ikone"><img src="./12-strasse.png" alt=""></span>
+      <span class="bez">Gefahren<small id="km-hilfe">seit dem letzten Tanken</small></span><span class="feld"><input type="text" inputmode="decimal" id="f-km" placeholder="0"><i>km</i></span>
+    </label>
+    <label class="zeile schalter">
+      <span class="ikone"><img src="./9-zapfsaeule.png" alt=""></span>
+      <span class="bez">Voll getankt<small>sonst zählt es bis zur nächsten Volltankung</small></span>
+      <input type="checkbox" id="f-voll" checked><span class="knopf"></span>
+    </label>
   </div>
   <div class="aktionen">
     <button type="submit" class="primaer" id="btn-speichern">Eintrag speichern</button>
     <button type="button" class="sekundaer" id="btn-abbrechen" hidden>Bearbeiten abbrechen</button>
     <button type="button" class="sekundaer gefahr" id="btn-loeschen" hidden>Eintrag löschen</button>
-    <button type="button" class="sekundaer" id="btn-historie">Historie <span class="badge" id="anzahl">0</span></button>
+    <button type="button" class="sekundaer" id="btn-historie"><img src="./14-historie.png" alt="">Historie <span class="badge" id="anzahl">0</span></button>
   </div>
 </form>
 </main>
@@ -218,16 +258,23 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
   <div class="blatt-inhalt">
     <header class="blatt-kopf"><button type="button" class="zurueck" id="btn-einstellungen-zu">‹ Zurück</button><h2>Einstellungen</h2></header>
     <div class="karte" style="margin-top:0">
-      <label class="zeile"><span>Fahrzeug</span><span class="feld"><input type="text" class="text" id="e-fahrzeug"></span></label>
-      <label class="zeile"><span>Kraftstoff</span><span class="feld"><input type="text" class="text" id="e-kraftstoff"></span></label>
-      <div class="zeile"><span>Kilometer</span>
-        <div class="segment" id="e-kmmodus" role="group" aria-label="Kilometer-Eingabe">
+      <label class="zeile"><span class="bez">Fahrzeug</span><span class="feld"><input type="text" class="text" id="e-fahrzeug"></span></label>
+      <label class="zeile"><span class="bez">Kraftstoff</span><span class="feld"><input type="text" class="text" id="e-kraftstoff"></span></label>
+      <div class="zeile"><span class="bez">Kilometer</span>
+        <div class="segment" id="e-kmmodus" role="group" aria-label="Kilometer-Eingabe" style="margin-left:auto">
           <button type="button" data-modus="trip">Tageszähler</button>
           <button type="button" data-modus="stand">Kilometerstand</button>
         </div>
       </div>
+      <div class="zeile"><span class="bez">Kosten je</span>
+        <div class="segment" id="e-einheit" role="group" aria-label="Kosten anzeigen je" style="margin-left:auto">
+          <button type="button" data-einheit="1">km</button>
+          <button type="button" data-einheit="10">10 km</button>
+          <button type="button" data-einheit="100">100 km</button>
+        </div>
+      </div>
     </div>
-    <p class="erklaerung">Tageszähler: du gibst die Strecke seit dem letzten Tanken ein (Tageszähler beim Tanken auf null). Kilometerstand: du gibst den Gesamtstand ein, die Strecke ergibt sich aus der Differenz zum vorigen Eintrag. Der Verbrauch wird von Volltankung zu Volltankung gerechnet; Teilbetankungen werden bis zur nächsten Volltankung zusammengefasst.</p>
+    <p class="erklaerung">Die Bezugsgröße für die Kosten lässt sich auch auf der Startseite wechseln: auf die Kostenzahl tippen. Tageszähler heißt, du gibst die Strecke seit dem letzten Tanken ein; Kilometerstand heißt, du gibst den Gesamtstand ein und die Strecke ergibt sich aus der Differenz. Der Verbrauch wird von Volltankung zu Volltankung gerechnet, Teilbetankungen werden bis zur nächsten Volltankung zusammengefasst.</p>
     <h3>Daten</h3>
     <div class="aktionen" style="margin-top:0">
       <button type="button" class="sekundaer" id="btn-export">Sicherung exportieren</button>
@@ -411,11 +458,11 @@ function aktualisiereAnzeige(){
 }
 
 function aktualisiereKopf(){
-  $('heute').textContent = datumLang(heuteISO());
-  $('fahrzeug').textContent = [einst.fahrzeug, einst.kraftstoff].filter(Boolean).join(', ');
+  $('held-marke').textContent = datumKurz(heuteISO());
+  $('fahrzeug').textContent = [einst.fahrzeug, einst.kraftstoff].filter(Boolean).join(' · ');
   $('anzahl').textContent = eintraege.length;
   $('version').textContent = 'v' + APP_VERSION;
-  document.querySelectorAll('#einheit button').forEach(b => b.classList.toggle('aktiv', Number(b.dataset.einheit) === einst.einheit));
+  document.querySelectorAll('#e-einheit button').forEach(b => b.classList.toggle('aktiv', Number(b.dataset.einheit) === einst.einheit));
   document.querySelectorAll('#e-kmmodus button').forEach(b => b.classList.toggle('aktiv', b.dataset.modus === einst.kmModus));
   const stand = einst.kmModus === 'stand';
   $('z-stand').hidden = !stand;
@@ -494,9 +541,16 @@ $('btn-loeschen').addEventListener('click', () => {
 
 felder.forEach(f => f.addEventListener('input', () => { speichereEntwurf(); aktualisiereAnzeige(); }));
 fVoll.addEventListener('change', () => { speichereEntwurf(); aktualisiereAnzeige(); });
-$('einheit').addEventListener('click', ev => {
+$('e-einheit').addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
   einst.einheit = Number(b.dataset.einheit); speichere(SCHL.einst, einst); render();
+});
+// Tippen auf die Kostenzahl schaltet die Bezugsgröße weiter: je km → je 10 km → je 100 km
+$('stat-kosten').addEventListener('click', () => {
+  const folge = [1, 10, 100];
+  einst.einheit = folge[(folge.indexOf(einst.einheit) + 1) % folge.length];
+  speichere(SCHL.einst, einst); render();
+  showInfo('Kosten ' + einheitText(), 2, $('stat-kosten'));
 });
 
 // ---------- Blätter ----------
@@ -527,7 +581,7 @@ $('e-kmmodus').addEventListener('click', ev => {
 
 // ---------- Historie ----------
 function chartSVG(punkte, dec, farbe){
-  if (punkte.length < 2) return '<div class="leer">' + (punkte.length ? 'Ein Wert – ab zwei Einträgen gibt es einen Verlauf.' : 'Noch keine Werte.') + '</div>';
+  if (punkte.length < 2) return '<div class="leer">' + (punkte.length ? '<div class="punkt"></div>Ein Wert – ab zwei Einträgen gibt es einen Verlauf.' : 'Noch keine Werte.') + '</div>';
   const W = 360, H = 150, l = 46, r = 12, t = 16, b = 26;
   const ys = punkte.map(p => p.y);
   const yMax = Math.max.apply(null, ys), yMin = Math.min.apply(null, ys);
@@ -553,16 +607,17 @@ function chartSVG(punkte, dec, farbe){
 function renderHistorie(){
   const g = gesamt(eintraege);
   const { s, werte } = auswerten(eintraege);
-  const stat = (wert, label) => '<div class="stat"><b>' + wert + '</b><span>' + label + '</span></div>';
+  const bild = n => '<img src="./' + n + '" alt="">';
+  const stat = (ikon, wert, label, klasse) => '<div class="stat-karte' + (klasse ? ' ' + klasse : '') + '">' + ikon + '<div><b>' + wert + '</b><span>' + label + '</span></div></div>';
   $('statistik').innerHTML =
-    stat(fmt(g.verbrauch, 1), 'Ø l/100 km') +
-    stat(fmt(g.kostenKm == null ? null : g.kostenKm * einst.einheit, einheitDec()), 'Ø ' + einheitText()) +
-    stat(fmt(g.literpreis, 3), 'Ø € je Liter') +
-    stat(fmt(g.km, 0) + ' km', 'gefahren') +
-    stat(fmt(g.liter, 1) + ' l', 'getankt') +
-    stat(fmt(g.preis, 2) + ' €', 'bezahlt');
-  $('chart-verbrauch').innerHTML = chartSVG(s.filter(e => werte.get(e.id).verbrauch != null).map(e => ({ datum: e.datum, y: werte.get(e.id).verbrauch })), 1, '#f5c518');
-  $('chart-preis').innerHTML = chartSVG(s.filter(e => werte.get(e.id).literpreis != null).map(e => ({ datum: e.datum, y: werte.get(e.id).literpreis })), 3, '#cfd2da');
+    stat(bild('13-tropfen.png'), fmt(g.verbrauch, 1), 'Ø l/100 km', 'hervor') +
+    stat(bild('11-euro.png'), fmt(g.kostenKm == null ? null : g.kostenKm * einst.einheit, einheitDec()), 'Ø ' + einheitText()) +
+    stat('<span class="euro-text">€</span>', fmt(g.literpreis, 3), 'Ø € je Liter') +
+    stat(bild('12-strasse.png'), fmt(g.km, 0) + ' km', 'gefahren') +
+    stat(bild('9-zapfsaeule.png'), fmt(g.liter, 1) + ' l', 'getankt') +
+    stat(bild('11-euro.png'), fmt(g.preis, 2) + ' €', 'bezahlt');
+  $('chart-verbrauch').innerHTML = chartSVG(s.filter(e => werte.get(e.id).verbrauch != null).map(e => ({ datum: e.datum, y: werte.get(e.id).verbrauch })), 1, '#ff8c1a');
+  $('chart-preis').innerHTML = chartSVG(s.filter(e => werte.get(e.id).literpreis != null).map(e => ({ datum: e.datum, y: werte.get(e.id).literpreis })), 3, '#c9ccd4');
   const liste = $('liste');
   if (!s.length){ liste.innerHTML = '<li class="leer-liste">Noch kein Eintrag – der erste kommt von der Startseite.</li>'; return; }
   liste.innerHTML = s.slice().reverse().map(e => {
@@ -573,11 +628,11 @@ function renderHistorie(){
       ? fmt(r.verbrauch, 1) + '<small>l/100 km</small>'
       : '<small>' + (e.voll ? 'ohne Verbrauch' : 'zählt weiter') + '</small>';
     return '<li><div class="eintrag">' +
-      '<span class="datum">' + datumKurz(e.datum) + (e.voll ? '' : '<span class="tag teil">Teilbetankung</span>') + (e.stand != null ? '<span class="tag">' + fmt(e.stand, 0) + ' km</span>' : '') + '</span>' +
+      '<span class="datum"><img src="./10-kalender.png" alt="">' + datumKurz(e.datum) + (e.voll ? '' : '<span class="tag teil">Teilbetankung</span>') + (e.stand != null ? '<span class="tag">' + fmt(e.stand, 0) + ' km</span>' : '') + '</span>' +
       '<span class="wert">' + wert + '</span><span class="details">' + zeile1 + '</span><span class="details">' + zeile2 + '</span></div>' +
       '<div class="eintrag-aktionen">' +
-      '<button type="button" data-aendern="' + esc(e.id) + '">Ändern</button>' +
-      '<button type="button" class="gefahr" data-loeschen="' + esc(e.id) + '">Löschen</button>' +
+      '<button type="button" data-aendern="' + esc(e.id) + '"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.3V21h3.7L17.6 10.1l-3.7-3.7L3 17.3zm17.7-10.2a1 1 0 0 0 0-1.4l-2.4-2.4a1 1 0 0 0-1.4 0l-1.8 1.8 3.7 3.7 1.9-1.7z"/></svg>Ändern</button>' +
+      '<button type="button" class="gefahr" data-loeschen="' + esc(e.id) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v7M14 10v7"/></svg>Löschen</button>' +
       '</div></li>';
   }).join('');
 }
