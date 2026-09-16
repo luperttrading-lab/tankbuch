@@ -13,7 +13,7 @@
 <link rel="manifest" href="./2-manifest.webmanifest">
 <title>Tankbuch</title>
 <script>
-const APP_VERSION = '3.5';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '3.6';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -210,7 +210,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v3.5</span></h1>
+    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v3.6</span></h1>
     <p class="fahrzeug" id="fahrzeug"></p>
   </div>
   <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen"><img data-bild="15-zahnrad.png" alt=""></button>
@@ -601,6 +601,14 @@ function passeGroesseAn(){
   de.classList.toggle('fest', hoehe() <= da);
 }
 
+// Tagewechsel: ein gespeicherter, unveränderter Eintrag von gestern wird losgelassen,
+// die App steht wieder auf Eingabe. Ungespeicherte Eingaben bleiben unangetastet.
+function tagPruefen(){
+  if (!bearbeite || !unveraendert()) return;
+  const e = eintraege.find(x => x.id === bearbeite);
+  if (e && e.datum !== heuteISO()){ formularLeeren(); render(); }
+}
+
 // Tastatur: beim Tippen Sperre lösen, danach wieder messen
 document.addEventListener('focusin', () => document.documentElement.classList.remove('fest'));
 document.addEventListener('focusout', () => setTimeout(passeGroesseAn, 200));
@@ -984,9 +992,9 @@ function announceUpdate(v, manual){
   const tippt = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA');
   if (manual || !tippt) setTimeout(() => location.reload(), manual ? 1500 : 3000);
 }
-window.addEventListener('pageshow', () => setTimeout(checkForUpdate, 800));
+window.addEventListener('pageshow', () => { tagPruefen(); setTimeout(checkForUpdate, 800); });
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible'){ render(); checkForUpdate(); }
+  if (document.visibilityState === 'visible'){ tagPruefen(); render(); checkForUpdate(); }
 });
 $('version').addEventListener('click', ev => { ev.stopPropagation(); checkForUpdate(true); });
 $('version').addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); checkForUpdate(true); } });
@@ -1008,6 +1016,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
 
 // ---------- Start ----------
 if (!ladeEntwurf()) fDatum.value = heuteISO();
+tagPruefen();
 render();
 })();
 </script>
