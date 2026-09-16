@@ -16,7 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <title>Tankbuch</title>
 <script>
-const APP_VERSION = '1.4';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '1.5';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -94,12 +94,12 @@ input[type=date]{background:transparent;border:0;outline:0;font:500 17px var(--m
 .badge{font:500 13px var(--mono);color:var(--muted);background:var(--panel-2);padding:2px 8px;border-radius:999px}
 .erklaerung{color:var(--muted);font-size:13px;line-height:1.45;margin:12px 4px 0}
 
-/* Abschnitte (Historie, Einstellungen) – im Textfluss, kein Overlay */
-.blatt{margin-top:22px;scroll-margin-top:12px}
+/* Eigene Seiten (Historie, Einstellungen) – immer nur eine davon sichtbar */
+.blatt{margin:0}
 .blatt-inhalt{max-width:560px;margin:0 auto}
-.blatt-kopf{display:flex;justify-content:space-between;align-items:center;padding:2px 2px 12px}
-.blatt-kopf h2{font-size:24px;font-weight:600}
-.blatt-kopf button{color:var(--accent);font-weight:600;font-size:17px;padding:6px 2px}
+.blatt-kopf{display:flex;justify-content:flex-start;align-items:baseline;gap:14px;padding:2px 2px 14px}
+.blatt-kopf .zurueck{color:var(--accent);font-weight:600;font-size:17px;padding:6px 6px 6px 0;flex:none}
+.blatt-kopf h2{font-size:22px;font-weight:600}
 .statistik{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .stat{background:var(--panel);border-radius:14px;padding:12px 14px}
 .stat b{display:block;font:500 22px/1.1 var(--mono);font-variant-numeric:tabular-nums}
@@ -150,6 +150,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
   <button class="btn" id="update-go">Jetzt laden</button>
 </div>
 
+<main id="seite-start">
 <header class="kopf">
   <div>
     <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v1.0</span></h1>
@@ -196,10 +197,11 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
     <button type="button" class="sekundaer" id="btn-historie">Historie <span class="badge" id="anzahl">0</span></button>
   </div>
 </form>
+</main>
 
 <section class="blatt" id="historie" hidden aria-label="Historie">
   <div class="blatt-inhalt">
-    <header class="blatt-kopf"><h2>Historie</h2><button type="button" id="btn-historie-zu">Schließen</button></header>
+    <header class="blatt-kopf"><button type="button" class="zurueck" id="btn-historie-zu">‹ Zurück</button><h2>Historie</h2></header>
     <div class="statistik" id="statistik"></div>
     <h3>Verbrauch <span class="klein">l/100 km je Volltankung</span></h3>
     <div class="chart" id="chart-verbrauch"></div>
@@ -212,7 +214,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 
 <section class="blatt" id="einstellungen" hidden aria-label="Einstellungen">
   <div class="blatt-inhalt">
-    <header class="blatt-kopf"><h2>Einstellungen</h2><button type="button" id="btn-einstellungen-zu">Schließen</button></header>
+    <header class="blatt-kopf"><button type="button" class="zurueck" id="btn-einstellungen-zu">‹ Zurück</button><h2>Einstellungen</h2></header>
     <div class="karte" style="margin-top:0">
       <label class="zeile"><span>Fahrzeug</span><span class="feld"><input type="text" class="text" id="e-fahrzeug"></span></label>
       <label class="zeile"><span>Kraftstoff</span><span class="feld"><input type="text" class="text" id="e-kraftstoff"></span></label>
@@ -428,7 +430,7 @@ function render(){ aktualisiereKopf(); aktualisiereAnzeige(); passeGroesseAn(); 
 let skala = 1;
 function passeGroesseAn(){
   const de = document.documentElement, koerper = document.body;
-  if (!$('historie').hidden || !$('einstellungen').hidden) return;
+  if ($('seite-start').hidden) return;
   const da = window.innerHeight;
   const hoehe = () => koerper.getBoundingClientRect().height;   // scrollHeight klemmt auf Fensterhöhe
   de.style.setProperty('--sk', '1');
@@ -483,34 +485,25 @@ $('einheit').addEventListener('click', ev => {
 });
 
 // ---------- Blätter ----------
-function blattAuf(id){
-  const el = $(id); el.hidden = false;
-  document.documentElement.style.setProperty('--sk', '1');
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+const SEITEN = ['seite-start', 'historie', 'einstellungen'];
+function zeigeSeite(id){
+  SEITEN.forEach(s => { $(s).hidden = (s !== id); });
+  window.scrollTo(0, 0);
+  if (id === 'seite-start') passeGroesseAn();
+  else document.documentElement.style.setProperty('--sk', '1');
 }
-function blattZu(id){ $(id).hidden = true; passeGroesseAn(); }
 
-$('btn-historie').addEventListener('click', () => {
-  const el = $('historie');
-  if (!el.hidden){ blattZu('historie'); return; }              // zweiter Tipp schließt wieder
-  renderHistorie(); blattAuf('historie');
-});
-$('btn-historie-zu').addEventListener('click', () => {
-  blattZu('historie'); $('btn-historie').scrollIntoView({ behavior: 'smooth', block: 'center' });
-});
+$('btn-historie').addEventListener('click', () => { renderHistorie(); zeigeSeite('historie'); });
+$('btn-historie-zu').addEventListener('click', () => zeigeSeite('seite-start'));
 $('btn-einstellungen').addEventListener('click', () => {
-  const el = $('einstellungen');
-  if (!el.hidden){ einstellungenSichern(); blattZu('einstellungen'); return; }
   $('e-fahrzeug').value = einst.fahrzeug || ''; $('e-kraftstoff').value = einst.kraftstoff || '';
-  blattAuf('einstellungen');
+  zeigeSeite('einstellungen');
 });
 function einstellungenSichern(){
   einst.fahrzeug = $('e-fahrzeug').value.trim(); einst.kraftstoff = $('e-kraftstoff').value.trim();
   speichere(SCHL.einst, einst); render();
 }
-$('btn-einstellungen-zu').addEventListener('click', () => {
-  einstellungenSichern(); blattZu('einstellungen'); window.scrollTo({ top: 0, behavior: 'smooth' });
-});
+$('btn-einstellungen-zu').addEventListener('click', () => { einstellungenSichern(); zeigeSeite('seite-start'); });
 $('e-kmmodus').addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
   einst.kmModus = b.dataset.modus; speichere(SCHL.einst, einst); render();
@@ -583,7 +576,7 @@ $('liste').addEventListener('click', ev => {
     speichere(SCHL.eintraege, eintraege); render(); renderHistorie(); showInfo('Eintrag gelöscht', 2, b);
     return;
   }
-  formularFuellen(e); render(); blattZu('historie'); window.scrollTo({ top: 0, behavior: 'smooth' });
+  formularFuellen(e); render(); zeigeSeite('seite-start');
   setTimeout(() => showInfo('Eintrag vom ' + datumKurz(e.datum) + ' wird bearbeitet', 3), 400);
 });
 
