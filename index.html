@@ -13,7 +13,7 @@
 <link rel="manifest" href="./2-manifest.webmanifest">
 <title>Tankbuch</title>
 <script>
-const APP_VERSION = '2.2';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '2.3';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -182,7 +182,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v2.2</span></h1>
+    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v2.3</span></h1>
     <p class="fahrzeug" id="fahrzeug"></p>
   </div>
   <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen"><img data-bild="15-zahnrad.png" alt=""></button>
@@ -311,7 +311,7 @@ function auswerten(list){
   let L = 0, KM = 0, P = 0, kmOk = true, teile = 0;
   const werte = new Map();
   for (const e of s){
-    const r = { literpreis: e.liter > 0 ? e.preis / e.liter : null, verbrauch: null, kostenKm: null,
+    const r = { literpreis: e.liter > 0 && e.preis > 0 ? e.preis / e.liter : null, verbrauch: null, kostenKm: null,
                 spanKm: null, spanLiter: null, spanPreis: null, teile: null };
     L += e.liter || 0; P += e.preis || 0;
     if (e.km > 0) KM += e.km; else kmOk = false;
@@ -453,6 +453,9 @@ function einheitText(){ return einst.einheit === 1 ? '€ je km' : '€ je ' + e
 
 function aktualisiereAnzeige(){
   const temp = entwurfEintrag();
+  const leer = !bearbeite && temp.liter == null && temp.preis == null && temp.km == null && temp.stand == null;
+  if (leer && eintraege.length){ zeigeLetzten(); return; }
+  $('held-marke').textContent = datumKurz(heuteISO());
   const basis = eintraege.filter(e => e.id !== temp.id);
   const { werte } = auswerten(basis.concat([temp]));
   const r = werte.get(temp.id);
@@ -472,8 +475,22 @@ function aktualisiereAnzeige(){
   else h.textContent = fmt(r.spanLiter, 2) + ' l auf ' + fmt(r.spanKm, 0) + ' km.';
 }
 
+// Formular leer: die Kachel zeigt die letzte gespeicherte Tankung, bis etwas Neues getippt wird
+function zeigeLetzten(){
+  const { s, werte } = auswerten(eintraege);
+  const e = s[s.length - 1], r = werte.get(e.id);
+  $('held-marke').textContent = 'Letzte Tankung ' + datumKurz(e.datum);
+  $('a-verbrauch').textContent = fmt(r.verbrauch, 1);
+  $('a-kosten').textContent = fmt(r.kostenKm == null ? null : r.kostenKm * einst.einheit, einheitDec());
+  $('a-kosten-einheit').textContent = einheitText();
+  $('a-literpreis').textContent = fmt(r.literpreis, 3);
+  const h = $('a-hinweis'); h.classList.remove('warn');
+  if (!e.voll) h.textContent = fmt(e.liter, 2) + ' l teilgetankt – Verbrauch folgt beim nächsten Volltanken.';
+  else if (r.verbrauch == null) h.textContent = fmt(e.liter, 2) + ' l gespeichert, ohne Verbrauchswert.';
+  else if (r.teile > 0) h.textContent = 'Gespeichert – über ' + r.teile + (r.teile === 1 ? ' Teilbetankung' : ' Teilbetankungen') + ': ' + fmt(r.spanLiter, 2) + ' l auf ' + fmt(r.spanKm, 0) + ' km.';
+  else h.textContent = 'Gespeichert – ' + fmt(r.spanLiter, 2) + ' l auf ' + fmt(r.spanKm, 0) + ' km.';
+}
 function aktualisiereKopf(){
-  $('held-marke').textContent = datumKurz(heuteISO());
   $('fahrzeug').textContent = [einst.fahrzeug, einst.kraftstoff].filter(Boolean).join(' · ');
   $('anzahl').textContent = eintraege.length;
   $('version').textContent = 'v' + APP_VERSION;
@@ -734,7 +751,7 @@ function announceUpdate(v, manual){
 }
 window.addEventListener('pageshow', () => setTimeout(checkForUpdate, 800));
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible'){ aktualisiereKopf(); checkForUpdate(); }
+  if (document.visibilityState === 'visible'){ render(); checkForUpdate(); }
 });
 $('version').addEventListener('click', ev => { ev.stopPropagation(); checkForUpdate(true); });
 $('version').addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); checkForUpdate(true); } });
