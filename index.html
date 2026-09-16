@@ -13,7 +13,7 @@
 <link rel="manifest" href="./2-manifest.webmanifest">
 <title>Tankbuch</title>
 <script>
-const APP_VERSION = '2.3';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '2.4';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -104,6 +104,7 @@ input[type=date]{background:transparent;border:0;outline:0;font-size:17px;font-w
 
 /* Knöpfe */
 .aktionen{display:grid;gap:calc(8px * var(--sk));margin-top:calc(12px * var(--sk))}
+.paar{display:grid;grid-template-columns:1fr 1fr;gap:calc(8px * var(--sk))}
 .primaer{background:var(--b-knopf) center / cover no-repeat;color:var(--o-ink);font-weight:700;font-size:17px;
   padding:calc(10px + 6px * var(--sk));border-radius:16px;width:100%}
 .primaer:active{filter:brightness(.93)}
@@ -182,7 +183,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v2.3</span></h1>
+    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v2.4</span></h1>
     <p class="fahrzeug" id="fahrzeug"></p>
   </div>
   <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen"><img data-bild="15-zahnrad.png" alt=""></button>
@@ -239,8 +240,10 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
   </div>
   <div class="aktionen">
     <button type="submit" class="primaer" id="btn-speichern">Eintrag speichern</button>
-    <button type="button" class="sekundaer" id="btn-abbrechen" hidden>Bearbeiten abbrechen</button>
-    <button type="button" class="sekundaer gefahr" id="btn-loeschen" hidden>Eintrag löschen</button>
+    <div class="paar" id="paar" hidden>
+      <button type="button" class="sekundaer" id="btn-abbrechen">Neue Tankung</button>
+      <button type="button" class="sekundaer gefahr" id="btn-loeschen">Löschen</button>
+    </div>
     <button type="button" class="sekundaer" id="btn-historie"><img data-bild="14-historie.png" alt="">Historie <span class="badge" id="anzahl">0</span></button>
   </div>
 </form>
@@ -433,6 +436,15 @@ function entwurfEintrag(){
     voll: fVoll.checked, ts: alt ? alt.ts : Number.MAX_SAFE_INTEGER
   };
 }
+// true, wenn das Formular genau dem gespeicherten Eintrag entspricht
+function unveraendert(){
+  if (!bearbeite) return false;
+  const alt = eintraege.find(e => e.id === bearbeite); if (!alt) return false;
+  const neu = entwurfEintrag();
+  const gleich = (a, b) => (a == null && b == null) || (a != null && b != null && Math.abs(a - b) < 1e-9);
+  return alt.datum === neu.datum && gleich(alt.liter, neu.liter) && gleich(alt.preis, neu.preis)
+      && gleich(alt.km, neu.km) && gleich(alt.stand, neu.stand) && !!alt.voll === !!neu.voll;
+}
 function hatVorStand(){ return eintraege.some(e => e.id !== bearbeite && e.stand != null); }
 
 function formularLeeren(){
@@ -455,10 +467,10 @@ function aktualisiereAnzeige(){
   const temp = entwurfEintrag();
   const leer = !bearbeite && temp.liter == null && temp.preis == null && temp.km == null && temp.stand == null;
   if (leer && eintraege.length){ zeigeLetzten(); return; }
-  $('held-marke').textContent = datumKurz(heuteISO());
   const basis = eintraege.filter(e => e.id !== temp.id);
   const { werte } = auswerten(basis.concat([temp]));
   const r = werte.get(temp.id);
+  $('held-marke').textContent = bearbeite ? (unveraendert() ? 'Gespeichert ' + datumKurz(temp.datum) : 'Nicht gespeichert') : datumKurz(heuteISO());
   $('a-verbrauch').textContent = fmt(r.verbrauch, 1);
   $('a-kosten').textContent = fmt(r.kostenKm == null ? null : r.kostenKm * einst.einheit, einheitDec());
   $('a-kosten-einheit').textContent = einheitText();
@@ -471,8 +483,8 @@ function aktualisiereAnzeige(){
     if (einst.kmModus === 'stand' && !hatVorStand()) h.textContent = 'Erster Kilometerstand – der Verbrauch folgt ab der nächsten Tankung.';
     else { h.textContent = einst.kmModus === 'stand' ? 'Kilometerstand fehlt oder liegt unter dem vorigen.' : 'Für Verbrauch und Kosten fehlen die Kilometer.'; h.classList.add('warn'); }
   }
-  else if (r.teile > 0) h.textContent = 'Über ' + r.teile + (r.teile === 1 ? ' Teilbetankung' : ' Teilbetankungen') + ' seit der letzten Volltankung: ' + fmt(r.spanLiter, 2) + ' l auf ' + fmt(r.spanKm, 0) + ' km.';
-  else h.textContent = fmt(r.spanLiter, 2) + ' l auf ' + fmt(r.spanKm, 0) + ' km.';
+  else if (r.teile > 0) h.textContent = (unveraendert() ? 'Gespeichert – über ' : 'Über ') + r.teile + (r.teile === 1 ? ' Teilbetankung' : ' Teilbetankungen') + ' seit der letzten Volltankung: ' + fmt(r.spanLiter, 2) + ' l auf ' + fmt(r.spanKm, 0) + ' km.';
+  else h.textContent = (unveraendert() ? 'Gespeichert – ' : '') + fmt(r.spanLiter, 2) + ' l auf ' + fmt(r.spanKm, 0) + ' km.';
 }
 
 // Formular leer: die Kachel zeigt die letzte gespeicherte Tankung, bis etwas Neues getippt wird
@@ -500,9 +512,8 @@ function aktualisiereKopf(){
   $('z-stand').hidden = !stand;
   $('z-km').hidden = stand && hatVorStand();
   $('km-hilfe').textContent = stand ? 'nur beim ersten Eintrag: km seit dem letzten Tanken' : 'seit dem letzten Tanken';
-  $('btn-speichern').textContent = bearbeite ? 'Änderung speichern' : 'Eintrag speichern';
-  $('btn-abbrechen').hidden = !bearbeite;
-  $('btn-loeschen').hidden = !bearbeite;
+  $('btn-speichern').textContent = !bearbeite ? 'Eintrag speichern' : (unveraendert() ? 'Gespeichert' : 'Änderung speichern');
+  $('paar').hidden = !bearbeite;
 }
 function render(){ aktualisiereKopf(); aktualisiereAnzeige(); passeGroesseAn(); }
 
@@ -518,6 +529,8 @@ function passeGroesseAn(){
     return;
   }
   const da = window.innerHeight;
+  // Sperre vor dem Messen lösen: mit height:100% liefert der Körper sonst immer die Fensterhöhe
+  de.classList.remove('fest');
   const hoehe = () => koerper.getBoundingClientRect().height;   // scrollHeight klemmt auf Fensterhöhe
   de.style.setProperty('--sk', '1');
   const h1 = hoehe();
@@ -549,18 +562,21 @@ $('formular').addEventListener('submit', ev => {
   if (!(t.preis > 0)) return fehler('Bezahlter Preis fehlt', fPreis);
   if (einst.kmModus === 'stand'){ if (!(t.stand > 0)) return fehler('Kilometerstand fehlt', fStand); }
   else if (!(t.km > 0)) return fehler('Gefahrene Kilometer fehlen', fKm);
+  if (unveraendert()){ showInfo('Daten gespeichert – nichts geändert', 2); return; }
+  let meldung;
   if (bearbeite){
     const i = eintraege.findIndex(e => e.id === bearbeite);
     eintraege[i] = Object.assign({}, eintraege[i], t, { id: bearbeite });
+    meldung = 'Änderung gespeichert';
   } else {
     t.id = neueId(); t.ts = Date.now(); eintraege.push(t);
+    bearbeite = t.id;                      // Werte bleiben stehen und bleiben änderbar
+    meldung = 'Eintrag gespeichert';
   }
   auswerten(eintraege);                    // abgeleitete km festschreiben
   speichere(SCHL.eintraege, eintraege);
-  const war = bearbeite;
-  formularLeeren(); render(); if (!$('historie').hidden) renderHistorie();
-  showInfo(war ? 'Änderung gespeichert' : 'Eintrag gespeichert', 2);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  speichereEntwurf(); render(); if (!$('historie').hidden) renderHistorie();
+  showInfo(meldung, 2);
 });
 $('btn-abbrechen').addEventListener('click', () => { formularLeeren(); render(); });
 $('btn-loeschen').addEventListener('click', () => {
@@ -571,8 +587,9 @@ $('btn-loeschen').addEventListener('click', () => {
   formularLeeren(); render(); if (!$('historie').hidden) renderHistorie(); showInfo('Eintrag gelöscht', 2);
 });
 
-felder.forEach(f => f.addEventListener('input', () => { speichereEntwurf(); aktualisiereAnzeige(); }));
-fVoll.addEventListener('change', () => { speichereEntwurf(); aktualisiereAnzeige(); });
+// render() statt nur der Anzeige: sonst bleibt die Knopfbeschriftung auf "Gespeichert" stehen
+felder.forEach(f => f.addEventListener('input', () => { speichereEntwurf(); render(); }));
+fVoll.addEventListener('change', () => { speichereEntwurf(); render(); });
 $('e-einheit').addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
   einst.einheit = Number(b.dataset.einheit); speichere(SCHL.einst, einst); render();
