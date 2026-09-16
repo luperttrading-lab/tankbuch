@@ -16,7 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <title>Tankbuch</title>
 <script>
-const APP_VERSION = '1.3';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '1.4';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -25,13 +25,13 @@ const APP_VERSION = '1.3';          // bei JEDER Änderung hochzählen
   --ok:#34c759; --warn:#ff6b6b;
   --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-  --r:16px;
+  --r:16px; --sk:1;            /* --sk: Platzfaktor, von passeGroesseAn() gesetzt */
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:var(--bg);-webkit-text-size-adjust:100%}
 body{background:var(--bg);color:var(--text);font:400 17px/1.4 var(--sans);
-  padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 28px);
-  max-width:560px;margin:0 auto;min-height:100vh}
+  padding:calc(env(safe-area-inset-top) + 4px + 6px * var(--sk)) 16px calc(env(safe-area-inset-bottom) + 6px + 8px * var(--sk));
+  max-width:560px;margin:0 auto}
 button,input{font:inherit;color:inherit}
 button{background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -39,55 +39,55 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
 /* Kopf */
-.kopf{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 2px 18px}
-.kopf h1{font-size:26px;font-weight:600;letter-spacing:-.01em;line-height:1.1}
+.kopf{display:flex;justify-content:space-between;align-items:flex-start;padding:2px 2px calc(14px * var(--sk))}
+.kopf h1{font-size:calc(21px + 5px * var(--sk));font-weight:600;letter-spacing:-.01em;line-height:1.1}
 .version{font:500 12px var(--mono);color:var(--muted);text-decoration:underline dotted;text-underline-offset:3px;margin-left:8px;vertical-align:3px;cursor:pointer}
 .fahrzeug{color:var(--muted);font-size:14px;margin-top:4px}
 .kopf-rechts{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .heute{font:500 14px var(--mono);color:var(--muted);white-space:nowrap}
-.zahnrad{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--muted);background:var(--panel)}
+.zahnrad{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--muted);background:var(--panel)}
 .zahnrad svg{width:18px;height:18px}
 
 /* Anzeige (Live-Auswertung) */
-.anzeige{background:var(--panel);border-radius:var(--r);padding:20px 18px 14px}
+.anzeige{background:var(--panel);border-radius:var(--r);padding:calc(18px * var(--sk)) 18px calc(13px * var(--sk))}
 .anzeige .haupt{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-.anzeige .haupt .zahl{font:600 60px/1 var(--mono);color:var(--accent);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.anzeige .haupt .zahl{font:600 calc(28px + 32px * var(--sk))/1 var(--mono);color:var(--accent);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .anzeige .einheit{color:var(--muted);font-size:14px}
-.anzeige .neben{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-.anzeige .neben .zahl{display:block;font:500 26px/1.1 var(--mono);font-variant-numeric:tabular-nums}
+.anzeige .neben{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:calc(14px * var(--sk));padding-top:calc(12px * var(--sk));border-top:1px solid var(--line)}
+.anzeige .neben .zahl{display:block;font:500 calc(17px + 9px * var(--sk))/1.1 var(--mono);font-variant-numeric:tabular-nums}
 .anzeige .neben .einheit{display:block;margin-top:2px}
-.hinweis{margin-top:12px;font-size:13px;color:var(--muted);min-height:18px}
+.hinweis{margin-top:calc(10px * var(--sk));font-size:13px;color:var(--muted);min-height:16px}
 .hinweis.warn{color:var(--warn)}
 .segment{display:inline-flex;background:var(--panel-2);border-radius:10px;padding:3px;gap:2px}
-.segment button{padding:6px 10px;border-radius:8px;font-size:13px;color:var(--muted);white-space:nowrap}
+.segment button{padding:calc(4px + 2px * var(--sk)) 10px;border-radius:8px;font-size:13px;color:var(--muted);white-space:nowrap}
 .segment button.aktiv{background:var(--accent);color:var(--accent-ink);font-weight:600}
-.anzeige .segment{margin-top:10px}
+.anzeige .segment{margin-top:calc(9px * var(--sk))}
 
 /* Formular */
-.karte{margin-top:16px;background:var(--panel);border-radius:var(--r);overflow:hidden}
-.zeile{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;min-height:54px;border-bottom:1px solid var(--line);position:relative}
+.karte{margin-top:calc(13px * var(--sk));background:var(--panel);border-radius:var(--r);overflow:hidden}
+.zeile{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;min-height:calc(36px + 18px * var(--sk));border-bottom:1px solid var(--line);position:relative}
 .karte .zeile:last-child{border-bottom:0}
 .zeile:focus-within{background:var(--panel-2)}
-.zeile > span:first-child{font-size:16px;flex:none}
+.zeile > span:first-child{font-size:calc(15px + 1px * var(--sk));flex:none}
 .zeile small{display:block;color:var(--muted);font-size:12px;line-height:1.2;font-weight:400}
 .feld{display:flex;align-items:baseline;gap:6px;flex:1;justify-content:flex-end;min-width:0}
 .feld input{width:100%;max-width:170px;text-align:right;background:transparent;border:0;outline:0;
-  font:500 19px var(--mono);font-variant-numeric:tabular-nums;padding:14px 0;min-width:0}
+  font:500 max(16px, calc(19px * var(--sk))) var(--mono);font-variant-numeric:tabular-nums;padding:calc(8px * var(--sk)) 0;min-width:0}
 .feld input.text{font-family:var(--sans);font-size:17px;max-width:200px}
 .feld input::placeholder{color:#4a4e58}
 .feld i{font-style:normal;color:var(--muted);font-size:14px;width:22px;flex:none}
-input[type=date]{background:transparent;border:0;outline:0;font:500 17px var(--mono);color:var(--text);text-align:right;padding:12px 0;-webkit-appearance:none;appearance:none}
+input[type=date]{background:transparent;border:0;outline:0;font:500 17px var(--mono);color:var(--text);text-align:right;padding:calc(9px * var(--sk)) 0;-webkit-appearance:none;appearance:none}
 .schalter input{position:absolute;opacity:0;width:0;height:0}
-.schalter .knopf{width:50px;height:30px;border-radius:15px;background:#3a3e48;position:relative;transition:background .2s;flex:none}
-.schalter .knopf::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s}
+.schalter .knopf{width:48px;height:29px;border-radius:15px;background:#3a3e48;position:relative;transition:background .2s;flex:none}
+.schalter .knopf::after{content:"";position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;background:#fff;transition:transform .2s}
 .schalter input:checked + .knopf{background:var(--accent)}
-.schalter input:checked + .knopf::after{transform:translateX(20px)}
+.schalter input:checked + .knopf::after{transform:translateX(19px)}
 .schalter input:focus-visible + .knopf{outline:2px solid var(--accent);outline-offset:2px}
 
-.aktionen{display:grid;gap:10px;margin-top:14px}
-.primaer{background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:17px;padding:15px;border-radius:14px;width:100%}
+.aktionen{display:grid;gap:calc(8px * var(--sk));margin-top:calc(12px * var(--sk))}
+.primaer{background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:17px;padding:calc(9px + 6px * var(--sk));border-radius:14px;width:100%}
 .primaer:active{filter:brightness(.92)}
-.sekundaer{background:var(--panel);color:var(--text);font-weight:500;font-size:17px;padding:14px;border-radius:14px;width:100%;
+.sekundaer{background:var(--panel);color:var(--text);font-weight:500;font-size:17px;padding:calc(8px + 6px * var(--sk));border-radius:14px;width:100%;
   border:1px solid var(--line);display:flex;justify-content:center;gap:8px;align-items:center}
 .sekundaer:active{background:var(--panel-2)}
 .gefahr{color:var(--warn)}
@@ -421,7 +421,28 @@ function aktualisiereKopf(){
   $('btn-abbrechen').hidden = !bearbeite;
   $('btn-loeschen').hidden = !bearbeite;
 }
-function render(){ aktualisiereKopf(); aktualisiereAnzeige(); }
+function render(){ aktualisiereKopf(); aktualisiereAnzeige(); passeGroesseAn(); }
+
+// Startbildschirm ohne Scrollen: Abstände und Zifferngröße an die Bildschirmhöhe anpassen.
+// Wirkt nur, solange Historie und Einstellungen zu sind – dort wird ohnehin gescrollt.
+let skala = 1;
+function passeGroesseAn(){
+  const de = document.documentElement, koerper = document.body;
+  if (!$('historie').hidden || !$('einstellungen').hidden) return;
+  const da = window.innerHeight;
+  const hoehe = () => koerper.getBoundingClientRect().height;   // scrollHeight klemmt auf Fensterhöhe
+  de.style.setProperty('--sk', '1');
+  const h1 = hoehe();
+  if (h1 <= da){ skala = 1; return; }
+  de.style.setProperty('--sk', '0');
+  const h0 = hoehe();
+  // Jede skalierte Größe ist linear in --sk, also gilt h(sk) = h0 + (h1 - h0) * sk
+  skala = h1 > h0 ? Math.max(0, Math.min(1, (da - h0) / (h1 - h0))) : 0;
+  de.style.setProperty('--sk', skala.toFixed(3));
+}
+let messTimer = null;
+window.addEventListener('resize', () => { clearTimeout(messTimer); messTimer = setTimeout(passeGroesseAn, 120); });
+window.addEventListener('orientationchange', () => setTimeout(passeGroesseAn, 250));
 
 // ---------- Speichern / Bearbeiten / Löschen ----------
 function fehler(text, feld){ showInfo(text, 3, feld); feld.focus(); }
@@ -464,9 +485,10 @@ $('einheit').addEventListener('click', ev => {
 // ---------- Blätter ----------
 function blattAuf(id){
   const el = $(id); el.hidden = false;
+  document.documentElement.style.setProperty('--sk', '1');
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-function blattZu(id){ $(id).hidden = true; }
+function blattZu(id){ $(id).hidden = true; passeGroesseAn(); }
 
 $('btn-historie').addEventListener('click', () => {
   const el = $('historie');
