@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0f1013">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tankbuch">
+<link rel="apple-touch-icon" href="./3-icon.png">
+<link rel="manifest" href="./2-manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Tankbuch</title>
+<script>
+const APP_VERSION = '1.1';          // bei JEDER Änderung hochzählen
+</script>
+<style>
+:root{
+  --bg:#0f1013; --panel:#16181d; --panel-2:#1d2026; --line:#2a2e37;
+  --text:#f2f2f5; --muted:#8e929c; --accent:#f5c518; --accent-ink:#1a1400;
+  --ok:#34c759; --warn:#ff6b6b;
+  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg);-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font:400 17px/1.4 var(--sans);
+  padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 28px);
+  max-width:560px;margin:0 auto;min-height:100vh}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none !important}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* Kopf */
+.kopf{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 2px 18px}
+.kopf h1{font-size:26px;font-weight:600;letter-spacing:-.01em;line-height:1.1}
+.version{font:500 12px var(--mono);color:var(--muted);text-decoration:underline dotted;text-underline-offset:3px;margin-left:8px;vertical-align:3px;cursor:pointer}
+.fahrzeug{color:var(--muted);font-size:14px;margin-top:4px}
+.kopf-rechts{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.heute{font:500 14px var(--mono);color:var(--muted);white-space:nowrap}
+.zahnrad{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--muted);background:var(--panel)}
+.zahnrad svg{width:18px;height:18px}
+
+/* Anzeige (Live-Auswertung) */
+.anzeige{background:var(--panel);border-radius:var(--r);padding:20px 18px 14px}
+.anzeige .haupt{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.anzeige .haupt .zahl{font:600 60px/1 var(--mono);color:var(--accent);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.anzeige .einheit{color:var(--muted);font-size:14px}
+.anzeige .neben{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.anzeige .neben .zahl{display:block;font:500 26px/1.1 var(--mono);font-variant-numeric:tabular-nums}
+.anzeige .neben .einheit{display:block;margin-top:2px}
+.hinweis{margin-top:12px;font-size:13px;color:var(--muted);min-height:18px}
+.hinweis.warn{color:var(--warn)}
+.segment{display:inline-flex;background:var(--panel-2);border-radius:10px;padding:3px;gap:2px}
+.segment button{padding:6px 10px;border-radius:8px;font-size:13px;color:var(--muted);white-space:nowrap}
+.segment button.aktiv{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.anzeige .segment{margin-top:10px}
+
+/* Formular */
+.karte{margin-top:16px;background:var(--panel);border-radius:var(--r);overflow:hidden}
+.zeile{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;min-height:54px;border-bottom:1px solid var(--line);position:relative}
+.karte .zeile:last-child{border-bottom:0}
+.zeile:focus-within{background:var(--panel-2)}
+.zeile > span:first-child{font-size:16px;flex:none}
+.zeile small{display:block;color:var(--muted);font-size:12px;line-height:1.2;font-weight:400}
+.feld{display:flex;align-items:baseline;gap:6px;flex:1;justify-content:flex-end;min-width:0}
+.feld input{width:100%;max-width:170px;text-align:right;background:transparent;border:0;outline:0;
+  font:500 19px var(--mono);font-variant-numeric:tabular-nums;padding:14px 0;min-width:0}
+.feld input.text{font-family:var(--sans);font-size:17px;max-width:200px}
+.feld input::placeholder{color:#4a4e58}
+.feld i{font-style:normal;color:var(--muted);font-size:14px;width:22px;flex:none}
+input[type=date]{background:transparent;border:0;outline:0;font:500 17px var(--mono);color:var(--text);text-align:right;padding:12px 0;-webkit-appearance:none;appearance:none}
+.schalter input{position:absolute;opacity:0;width:0;height:0}
+.schalter .knopf{width:50px;height:30px;border-radius:15px;background:#3a3e48;position:relative;transition:background .2s;flex:none}
+.schalter .knopf::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s}
+.schalter input:checked + .knopf{background:var(--accent)}
+.schalter input:checked + .knopf::after{transform:translateX(20px)}
+.schalter input:focus-visible + .knopf{outline:2px solid var(--accent);outline-offset:2px}
+
+.aktionen{display:grid;gap:10px;margin-top:14px}
+.primaer{background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:17px;padding:15px;border-radius:14px;width:100%}
+.primaer:active{filter:brightness(.92)}
+.sekundaer{background:var(--panel);color:var(--text);font-weight:500;font-size:17px;padding:14px;border-radius:14px;width:100%;
+  border:1px solid var(--line);display:flex;justify-content:center;gap:8px;align-items:center}
+.sekundaer:active{background:var(--panel-2)}
+.gefahr{color:var(--warn)}
+.badge{font:500 13px var(--mono);color:var(--muted);background:var(--panel-2);padding:2px 8px;border-radius:999px}
+.erklaerung{color:var(--muted);font-size:13px;line-height:1.45;margin:12px 4px 0}
+
+/* Abschnitte (Historie, Einstellungen) – im Textfluss, kein Overlay */
+.blatt{margin-top:22px;scroll-margin-top:12px}
+.blatt-inhalt{max-width:560px;margin:0 auto}
+.blatt-kopf{display:flex;justify-content:space-between;align-items:center;padding:2px 2px 12px}
+.blatt-kopf h2{font-size:24px;font-weight:600}
+.blatt-kopf button{color:var(--accent);font-weight:600;font-size:17px;padding:6px 2px}
+.statistik{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--panel);border-radius:14px;padding:12px 14px}
+.stat b{display:block;font:500 22px/1.1 var(--mono);font-variant-numeric:tabular-nums}
+.stat span{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+h3{font-size:15px;font-weight:600;margin:22px 2px 8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
+.chart{background:var(--panel);border-radius:14px;padding:10px 8px 6px}
+.chart svg{width:100%;height:auto;display:block;font-family:var(--mono)}
+.chart .leer{color:var(--muted);font-size:14px;padding:18px 8px 22px;text-align:center}
+.liste{list-style:none;background:var(--panel);border-radius:14px;overflow:hidden}
+.liste li{border-bottom:1px solid var(--line)}
+.liste li:last-child{border-bottom:0}
+.eintrag{display:grid;grid-template-columns:1fr auto;gap:3px 12px;padding:12px 14px 10px;width:100%;text-align:left}
+.eintrag-aktionen{display:flex;border-top:1px solid var(--line)}
+.eintrag-aktionen button{flex:1;padding:11px 8px;font-size:15px;font-weight:500;color:var(--accent)}
+.eintrag-aktionen button.gefahr{color:var(--warn)}
+.eintrag-aktionen button + button{border-left:1px solid var(--line)}
+.eintrag-aktionen button:active{background:var(--panel-2)}
+.eintrag .datum{font-weight:600;font-size:15px}
+.eintrag .tag{font-size:12px;color:var(--muted);margin-left:6px;font-weight:400}
+.eintrag .tag.teil{color:var(--accent)}
+.eintrag .details{grid-column:1 / span 2;color:var(--muted);font:500 13px var(--mono);font-variant-numeric:tabular-nums}
+.eintrag .wert{grid-column:2;grid-row:1;text-align:right;font:500 18px/1.2 var(--mono);font-variant-numeric:tabular-nums;align-self:center;white-space:nowrap}
+.eintrag .wert small{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.leer-liste{color:var(--muted);font-size:14px;padding:18px 14px;text-align:center}
+
+/* Update-Banner (Baustein 0) */
+.update{
+  position:fixed;left:12px;right:12px;top:max(env(safe-area-inset-top),12px);z-index:30;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:#34c759;color:#06240e;
+  padding:12px 14px;border-radius:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.5);
+  opacity:0;transition:opacity .35s ease;pointer-events:none;max-width:536px;margin:0 auto
+}
+.update.an{opacity:1;pointer-events:auto}
+.update[hidden]{display:none}
+.update.info{background:#2d2d33;color:#f2f2f7;font-weight:500}
+.update.unten{top:auto;bottom:max(env(safe-area-inset-bottom),12px)}
+.update .btn{width:auto;padding:8px 14px;font-size:15px;background:#06240e;color:#fff;border-radius:10px;font-weight:600;flex:none}
+
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+
+<div class="update" id="update" hidden>
+  <span id="update-text"></span>
+  <button class="btn" id="update-go">Jetzt laden</button>
+</div>
+
+<header class="kopf">
+  <div>
+    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v1.0</span></h1>
+    <p class="fahrzeug" id="fahrzeug"></p>
+  </div>
+  <div class="kopf-rechts">
+    <div class="heute" id="heute"></div>
+    <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </div>
+</header>
+
+<section class="anzeige" aria-live="polite">
+  <div class="haupt">
+    <span class="zahl" id="a-verbrauch">–</span>
+    <span class="einheit">Liter auf 100 km</span>
+  </div>
+  <div class="neben">
+    <div><span class="zahl" id="a-kosten">–</span><span class="einheit" id="a-kosten-einheit">€ je km</span></div>
+    <div><span class="zahl" id="a-literpreis">–</span><span class="einheit">€ je Liter</span></div>
+  </div>
+  <div class="hinweis" id="a-hinweis"></div>
+  <div class="segment" id="einheit" role="group" aria-label="Kosten anzeigen je">
+    <button type="button" data-einheit="1">je km</button>
+    <button type="button" data-einheit="10">je 10 km</button>
+    <button type="button" data-einheit="100">je 100 km</button>
+  </div>
+</section>
+
+<form id="formular" autocomplete="off" novalidate>
+  <div class="karte">
+    <label class="zeile"><span>Datum</span><input type="date" id="f-datum"></label>
+    <label class="zeile"><span>Getankt</span><span class="feld"><input type="text" inputmode="decimal" id="f-liter" placeholder="0,00"><i>l</i></span></label>
+    <label class="zeile"><span>Bezahlt</span><span class="feld"><input type="text" inputmode="decimal" id="f-preis" placeholder="0,00"><i>€</i></span></label>
+    <label class="zeile" id="z-stand" hidden><span>Kilometerstand</span><span class="feld"><input type="text" inputmode="numeric" id="f-stand" placeholder="0"><i>km</i></span></label>
+    <label class="zeile" id="z-km"><span>Gefahren<small id="km-hilfe">seit dem letzten Tanken</small></span><span class="feld"><input type="text" inputmode="decimal" id="f-km" placeholder="0"><i>km</i></span></label>
+    <label class="zeile schalter"><span>Voll getankt<small>sonst zählt es bis zur nächsten Volltankung</small></span><input type="checkbox" id="f-voll" checked><span class="knopf"></span></label>
+  </div>
+  <div class="aktionen">
+    <button type="submit" class="primaer" id="btn-speichern">Eintrag speichern</button>
+    <button type="button" class="sekundaer" id="btn-abbrechen" hidden>Bearbeiten abbrechen</button>
+    <button type="button" class="sekundaer gefahr" id="btn-loeschen" hidden>Eintrag löschen</button>
+    <button type="button" class="sekundaer" id="btn-historie">Historie <span class="badge" id="anzahl">0</span></button>
+  </div>
+</form>
+
+<section class="blatt" id="historie" hidden aria-label="Historie">
+  <div class="blatt-inhalt">
+    <header class="blatt-kopf"><h2>Historie</h2><button type="button" id="btn-historie-zu">Schließen</button></header>
+    <div class="statistik" id="statistik"></div>
+    <h3>Verbrauch <span class="klein">l/100 km je Volltankung</span></h3>
+    <div class="chart" id="chart-verbrauch"></div>
+    <h3>Literpreis <span class="klein">€/l je Tankung</span></h3>
+    <div class="chart" id="chart-preis"></div>
+    <h3>Einträge <span class="klein">ändern oder löschen</span></h3>
+    <ul class="liste" id="liste"></ul>
+  </div>
+</section>
+
+<section class="blatt" id="einstellungen" hidden aria-label="Einstellungen">
+  <div class="blatt-inhalt">
+    <header class="blatt-kopf"><h2>Einstellungen</h2><button type="button" id="btn-einstellungen-zu">Schließen</button></header>
+    <div class="karte" style="margin-top:0">
+      <label class="zeile"><span>Fahrzeug</span><span class="feld"><input type="text" class="text" id="e-fahrzeug"></span></label>
+      <label class="zeile"><span>Kraftstoff</span><span class="feld"><input type="text" class="text" id="e-kraftstoff"></span></label>
+      <div class="zeile"><span>Kilometer</span>
+        <div class="segment" id="e-kmmodus" role="group" aria-label="Kilometer-Eingabe">
+          <button type="button" data-modus="trip">Tageszähler</button>
+          <button type="button" data-modus="stand">Kilometerstand</button>
+        </div>
+      </div>
+    </div>
+    <p class="erklaerung">Tageszähler: du gibst die Strecke seit dem letzten Tanken ein (Tageszähler beim Tanken auf null). Kilometerstand: du gibst den Gesamtstand ein, die Strecke ergibt sich aus der Differenz zum vorigen Eintrag. Der Verbrauch wird von Volltankung zu Volltankung gerechnet; Teilbetankungen werden bis zur nächsten Volltankung zusammengefasst.</p>
+    <h3>Daten</h3>
+    <div class="aktionen" style="margin-top:0">
+      <button type="button" class="sekundaer" id="btn-export">Sicherung exportieren</button>
+      <button type="button" class="sekundaer" id="btn-import">Sicherung importieren</button>
+      <input type="file" id="f-import" accept="application/json,.json" hidden>
+      <button type="button" class="sekundaer gefahr" id="btn-loeschen-alle">Alle Einträge löschen</button>
+    </div>
+    <p class="erklaerung">Alle Einträge liegen nur auf diesem Gerät. Bevor du die App oder Safari-Daten löschst: Sicherung exportieren.</p>
+  </div>
+</section>
+
+<script>
+(() => {
+'use strict';
+
+// ---------- Rechenkern (ohne DOM, testbar) ----------
+function sortiert(list){
+  return list.slice().sort((a,b) => a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : (a.ts||0) - (b.ts||0));
+}
+// Liefert je Eintrag: Literpreis immer; Verbrauch/Kosten nur bei Volltankung,
+// gerechnet über alle Tankungen seit der vorigen Volltankung.
+function auswerten(list){
+  const s = sortiert(list);
+  let vorStand = null;
+  for (const e of s){                      // Strecke aus Kilometerständen ableiten
+    if (e.stand != null && vorStand != null){ const d = e.stand - vorStand; e.km = d > 0 ? d : null; }
+    vorStand = e.stand != null ? e.stand : null;
+  }
+  let L = 0, KM = 0, P = 0, kmOk = true, teile = 0;
+  const werte = new Map();
+  for (const e of s){
+    const r = { literpreis: e.liter > 0 ? e.preis / e.liter : null, verbrauch: null, kostenKm: null,
+                spanKm: null, spanLiter: null, spanPreis: null, teile: null };
+    L += e.liter || 0; P += e.preis || 0;
+    if (e.km > 0) KM += e.km; else kmOk = false;
+    if (e.voll){
+      if (kmOk && KM > 0){ r.verbrauch = 100 * L / KM; r.kostenKm = P / KM; r.spanKm = KM; r.spanLiter = L; r.spanPreis = P; r.teile = teile; }
+      L = 0; KM = 0; P = 0; kmOk = true; teile = 0;
+    } else teile++;
+    werte.set(e.id, r);
+  }
+  return { s, werte };
+}
+function gesamt(list){
+  const { s, werte } = auswerten(list);
+  let km = 0, liter = 0, preis = 0, spanKm = 0, spanL = 0, spanP = 0, n = 0;
+  for (const e of s){
+    liter += e.liter || 0; preis += e.preis || 0; if (e.km > 0) km += e.km;
+    const r = werte.get(e.id);
+    if (r.verbrauch != null){ spanKm += r.spanKm; spanL += r.spanLiter; spanP += r.spanPreis; n++; }
+  }
+  return { anzahl: s.length, km, liter, preis, volltankungen: n,
+           verbrauch: spanKm > 0 ? 100 * spanL / spanKm : null,
+           kostenKm: spanKm > 0 ? spanP / spanKm : null,
+           literpreis: liter > 0 ? preis / liter : null };
+}
+// ---------- Ende Rechenkern ----------
+
+const $ = id => document.getElementById(id);
+const SCHL = { eintraege: 'tankbuch.eintraege', einst: 'tankbuch.einstellungen', entwurf: 'tankbuch.entwurf', gesehen: 'tankbuch.gesehen' };
+const nfCache = {};
+function fmt(x, dec){
+  if (x == null || !isFinite(x)) return '–';
+  if (!nfCache[dec]) nfCache[dec] = new Intl.NumberFormat('de-DE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  return nfCache[dec].format(x);
+}
+function parseZahl(s){
+  if (s == null) return null;
+  s = String(s).trim().replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.');
+  if (s === '') return null;
+  const v = Number(s); return isFinite(v) ? v : null;
+}
+function zahlText(x){ return x == null ? '' : String(x).replace('.', ','); }
+function lade(k, fallback){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch (_) { return fallback; } }
+function speichere(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} }
+function heuteISO(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function datumLang(iso){ const [j,m,t] = iso.split('-').map(Number); return new Date(j, m-1, t).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'short', year:'numeric' }); }
+function datumKurz(iso){ const [j,m,t] = iso.split('-'); return t + '.' + m + '.' + j; }
+function datumMini(iso){ const [j,m,t] = iso.split('-'); return t + '.' + m + '.' + j.slice(2); }
+function neueId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+let eintraege = lade(SCHL.eintraege, []);
+let einst = Object.assign({ einheit: 1, kmModus: 'trip', fahrzeug: 'Ford Galaxy', kraftstoff: 'Diesel' }, lade(SCHL.einst, {}));
+let bearbeite = null;   // id des Eintrags, der gerade bearbeitet wird
+
+const fDatum = $('f-datum'), fLiter = $('f-liter'), fPreis = $('f-preis'), fKm = $('f-km'), fStand = $('f-stand'), fVoll = $('f-voll');
+const felder = [fDatum, fLiter, fPreis, fKm, fStand];
+
+// ---------- Banner (Baustein 0) ----------
+const updateEl = $('update');
+let ausTimer = null, infoTimer = null;
+function einblenden(){ clearTimeout(ausTimer); updateEl.hidden = false; void updateEl.offsetWidth; updateEl.classList.add('an'); }
+function ausblenden(){ updateEl.classList.remove('an'); clearTimeout(ausTimer);
+  ausTimer = setTimeout(() => { if (!updateEl.classList.contains('an')) updateEl.hidden = true; }, 380); }
+function bannerAnKante(ausloeser){
+  if (!ausloeser){ updateEl.classList.remove('unten'); return; }
+  const r = ausloeser.getBoundingClientRect();
+  updateEl.classList.toggle('unten', r.top + r.height / 2 > window.innerHeight / 2);
+}
+function showInfo(text, sekunden = 2, ausloeser = null){
+  bannerAnKante(ausloeser);
+  updateEl.className = 'update info';
+  $('update-text').textContent = text;
+  $('update-go').hidden = true;
+  einblenden();
+  clearTimeout(infoTimer);
+  if (sekunden) infoTimer = setTimeout(() => { if (updateEl.classList.contains('info')) ausblenden(); }, sekunden * 1000);
+}
+function zeigeBanner(text){
+  bannerAnKante(null);
+  updateEl.className = 'update';
+  $('update-text').textContent = text;
+  $('update-go').hidden = false;
+  einblenden();
+}
+updateEl.addEventListener('click', () => { if (updateEl.classList.contains('info')) ausblenden(); });
+$('update-go').addEventListener('click', () => { speichereEntwurf(); location.reload(); });
+
+// ---------- Entwurf (Formularzustand sofort sichern) ----------
+function speichereEntwurf(){
+  speichere(SCHL.entwurf, { datum: fDatum.value, liter: fLiter.value, preis: fPreis.value, km: fKm.value, stand: fStand.value, voll: fVoll.checked, bearbeite });
+}
+function ladeEntwurf(){
+  const d = lade(SCHL.entwurf, null);
+  if (!d) return false;
+  if (d.bearbeite && !eintraege.some(e => e.id === d.bearbeite)) d.bearbeite = null;
+  fDatum.value = d.datum || heuteISO(); fLiter.value = d.liter || ''; fPreis.value = d.preis || '';
+  fKm.value = d.km || ''; fStand.value = d.stand || ''; fVoll.checked = d.voll !== false;
+  bearbeite = d.bearbeite || null;
+  return true;
+}
+
+// ---------- Eintrag aus dem Formular ----------
+function entwurfEintrag(){
+  const alt = bearbeite ? eintraege.find(e => e.id === bearbeite) : null;
+  return {
+    id: bearbeite || '__entwurf', datum: fDatum.value || heuteISO(),
+    liter: parseZahl(fLiter.value), preis: parseZahl(fPreis.value),
+    km: parseZahl(fKm.value), stand: einst.kmModus === 'stand' ? parseZahl(fStand.value) : null,
+    voll: fVoll.checked, ts: alt ? alt.ts : Number.MAX_SAFE_INTEGER
+  };
+}
+function hatVorStand(){ return eintraege.some(e => e.id !== bearbeite && e.stand != null); }
+
+function formularLeeren(){
+  bearbeite = null;
+  fDatum.value = heuteISO(); fLiter.value = ''; fPreis.value = ''; fKm.value = ''; fStand.value = ''; fVoll.checked = true;
+  try { localStorage.removeItem(SCHL.entwurf); } catch (_) {}
+}
+function formularFuellen(e){
+  bearbeite = e.id;
+  fDatum.value = e.datum; fLiter.value = zahlText(e.liter); fPreis.value = zahlText(e.preis);
+  fKm.value = e.stand != null && hatVorStand() ? '' : zahlText(e.km); fStand.value = e.stand == null ? '' : String(e.stand); fVoll.checked = !!e.voll;
+  speichereEntwurf();
+}
+
+// ---------- Anzeige ----------
+function einheitDec(){ return einst.einheit === 1 ? 3 : 2; }
+function einheitText(){ return einst.einheit === 1 ? '€ je km' : '€ je ' + einst.einheit + ' km'; }
+
+function aktualisiereAnzeige(){
+  const temp = entwurfEintrag();
+  const basis = eintraege.filter(e => e.id !== temp.id);
+  const { werte } = auswerten(basis.concat([temp]));
+  const r = werte.get(temp.id);
+  $('a-verbrauch').textContent = fmt(r.verbrauch, 1);
+  $('a-kosten').textContent = fmt(r.kostenKm == null ? null : r.kostenKm * einst.einheit, einheitDec());
+  $('a-kosten-einheit').textContent = einheitText();
+  $('a-literpreis').textContent = fmt(r.literpreis, 3);
+
+  const h = $('a-hinweis'); h.classList.remove('warn');
+  if (!(temp.liter > 0) && !(temp.preis > 0)) h.textContent = 'Liter und Preis eintragen – die Werte erscheinen sofort.';
+  else if (!temp.voll) h.textContent = 'Teilbetankung: Verbrauch und Kosten kommen mit der nächsten Volltankung.';
+  else if (r.verbrauch == null){
+    if (einst.kmModus === 'stand' && !hatVorStand()) h.textContent = 'Erster Kilometerstand – der Verbrauch folgt ab der nächsten Tankung.';
+    else { h.textContent = einst.kmModus === 'stand' ? 'Kilometerstand fehlt oder liegt unter dem vorigen.' : 'Für Verbrauch und Kosten fehlen die Kilometer.'; h.classList.add('warn'); }
+  }
+  else if (r.teile > 0) h.textContent = 'Über ' + r.teile + (r.teile === 1 ? ' Teilbetankung' : ' Teilbetankungen') + ' seit der letzten Volltankung: ' + fmt(r.spanLiter, 2) + ' l auf ' + fmt(r.spanKm, 0) + ' km.';
+  else h.textContent = fmt(r.spanLiter, 2) + ' l auf ' + fmt(r.spanKm, 0) + ' km.';
+}
+
+function aktualisiereKopf(){
+  $('heute').textContent = datumLang(heuteISO());
+  $('fahrzeug').textContent = [einst.fahrzeug, einst.kraftstoff].filter(Boolean).join(', ');
+  $('anzahl').textContent = eintraege.length;
+  $('version').textContent = 'v' + APP_VERSION;
+  document.querySelectorAll('#einheit button').forEach(b => b.classList.toggle('aktiv', Number(b.dataset.einheit) === einst.einheit));
+  document.querySelectorAll('#e-kmmodus button').forEach(b => b.classList.toggle('aktiv', b.dataset.modus === einst.kmModus));
+  const stand = einst.kmModus === 'stand';
+  $('z-stand').hidden = !stand;
+  $('z-km').hidden = stand && hatVorStand();
+  $('km-hilfe').textContent = stand ? 'nur beim ersten Eintrag: km seit dem letzten Tanken' : 'seit dem letzten Tanken';
+  $('btn-speichern').textContent = bearbeite ? 'Änderung speichern' : 'Eintrag speichern';
+  $('btn-abbrechen').hidden = !bearbeite;
+  $('btn-loeschen').hidden = !bearbeite;
+}
+function render(){ aktualisiereKopf(); aktualisiereAnzeige(); }
+
+// ---------- Speichern / Bearbeiten / Löschen ----------
+function fehler(text, feld){ showInfo(text, 3, feld); feld.focus(); }
+$('formular').addEventListener('submit', ev => {
+  ev.preventDefault();
+  const t = entwurfEintrag();
+  if (!(t.liter > 0)) return fehler('Getankte Liter fehlen', fLiter);
+  if (!(t.preis > 0)) return fehler('Bezahlter Preis fehlt', fPreis);
+  if (einst.kmModus === 'stand'){ if (!(t.stand > 0)) return fehler('Kilometerstand fehlt', fStand); }
+  else if (!(t.km > 0)) return fehler('Gefahrene Kilometer fehlen', fKm);
+  if (bearbeite){
+    const i = eintraege.findIndex(e => e.id === bearbeite);
+    eintraege[i] = Object.assign({}, eintraege[i], t, { id: bearbeite });
+  } else {
+    t.id = neueId(); t.ts = Date.now(); eintraege.push(t);
+  }
+  auswerten(eintraege);                    // abgeleitete km festschreiben
+  speichere(SCHL.eintraege, eintraege);
+  const war = bearbeite;
+  formularLeeren(); render(); if (!$('historie').hidden) renderHistorie();
+  showInfo(war ? 'Änderung gespeichert' : 'Eintrag gespeichert', 2);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+$('btn-abbrechen').addEventListener('click', () => { formularLeeren(); render(); });
+$('btn-loeschen').addEventListener('click', () => {
+  const e = eintraege.find(x => x.id === bearbeite); if (!e) return;
+  if (!confirm('Eintrag vom ' + datumKurz(e.datum) + ' löschen?')) return;
+  eintraege = eintraege.filter(x => x.id !== bearbeite);
+  speichere(SCHL.eintraege, eintraege);
+  formularLeeren(); render(); if (!$('historie').hidden) renderHistorie(); showInfo('Eintrag gelöscht', 2);
+});
+
+felder.forEach(f => f.addEventListener('input', () => { speichereEntwurf(); aktualisiereAnzeige(); }));
+fVoll.addEventListener('change', () => { speichereEntwurf(); aktualisiereAnzeige(); });
+$('einheit').addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b) return;
+  einst.einheit = Number(b.dataset.einheit); speichere(SCHL.einst, einst); render();
+});
+
+// ---------- Blätter ----------
+function blattAuf(id){
+  const el = $(id); el.hidden = false;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function blattZu(id){ $(id).hidden = true; }
+
+$('btn-historie').addEventListener('click', () => {
+  const el = $('historie');
+  if (!el.hidden){ blattZu('historie'); return; }              // zweiter Tipp schließt wieder
+  renderHistorie(); blattAuf('historie');
+});
+$('btn-historie-zu').addEventListener('click', () => {
+  blattZu('historie'); $('btn-historie').scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+$('btn-einstellungen').addEventListener('click', () => {
+  const el = $('einstellungen');
+  if (!el.hidden){ einstellungenSichern(); blattZu('einstellungen'); return; }
+  $('e-fahrzeug').value = einst.fahrzeug || ''; $('e-kraftstoff').value = einst.kraftstoff || '';
+  blattAuf('einstellungen');
+});
+function einstellungenSichern(){
+  einst.fahrzeug = $('e-fahrzeug').value.trim(); einst.kraftstoff = $('e-kraftstoff').value.trim();
+  speichere(SCHL.einst, einst); render();
+}
+$('btn-einstellungen-zu').addEventListener('click', () => {
+  einstellungenSichern(); blattZu('einstellungen'); window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+$('e-kmmodus').addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b) return;
+  einst.kmModus = b.dataset.modus; speichere(SCHL.einst, einst); render();
+});
+
+// ---------- Historie ----------
+function chartSVG(punkte, dec, farbe){
+  if (punkte.length < 2) return '<div class="leer">' + (punkte.length ? 'Ein Wert – ab zwei Einträgen gibt es einen Verlauf.' : 'Noch keine Werte.') + '</div>';
+  const W = 360, H = 150, l = 46, r = 12, t = 16, b = 26;
+  const ys = punkte.map(p => p.y);
+  const yMax = Math.max.apply(null, ys), yMin = Math.min.apply(null, ys);
+  let min = yMin, max = yMax;
+  if (max - min < 1e-9){ min -= 1; max += 1; } else { const pad = (max - min) * .18; min -= pad; max += pad; }
+  const mean = ys.reduce((a, c) => a + c, 0) / ys.length;
+  if (fmt(yMax, dec) === fmt(yMin, dec)) dec += 1;
+  const x = i => l + (W - l - r) * i / (punkte.length - 1);
+  const y = v => t + (H - t - b) * (1 - (v - min) / (max - min));
+  const pfad = punkte.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.y).toFixed(1)).join(' ');
+  const kreise = punkte.map((p, i) => '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(p.y).toFixed(1) + '" r="3.5" fill="' + farbe + '"/>').join('');
+  const ym = y(mean).toFixed(1);
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Verlauf">' +
+    '<line x1="' + l + '" x2="' + (W - r) + '" y1="' + ym + '" y2="' + ym + '" stroke="#8e929c" stroke-dasharray="3 4" stroke-width="1"/>' +
+    '<text x="' + (W - r) + '" y="' + (y(mean) - 5).toFixed(1) + '" text-anchor="end" font-size="10" fill="#8e929c">Ø ' + fmt(mean, dec) + '</text>' +
+    '<text x="' + (l - 7) + '" y="' + (y(yMax) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#8e929c">' + fmt(yMax, dec) + '</text>' +
+    '<text x="' + (l - 7) + '" y="' + (y(yMin) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#8e929c">' + fmt(yMin, dec) + '</text>' +
+    '<path d="' + pfad + '" fill="none" stroke="' + farbe + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' + kreise +
+    '<text x="' + l + '" y="' + (H - 8) + '" font-size="10" fill="#8e929c">' + datumMini(punkte[0].datum) + '</text>' +
+    '<text x="' + (W - r) + '" y="' + (H - 8) + '" text-anchor="end" font-size="10" fill="#8e929c">' + datumMini(punkte[punkte.length - 1].datum) + '</text>' +
+    '</svg>';
+}
+function renderHistorie(){
+  const g = gesamt(eintraege);
+  const { s, werte } = auswerten(eintraege);
+  const stat = (wert, label) => '<div class="stat"><b>' + wert + '</b><span>' + label + '</span></div>';
+  $('statistik').innerHTML =
+    stat(fmt(g.verbrauch, 1), 'Ø l/100 km') +
+    stat(fmt(g.kostenKm == null ? null : g.kostenKm * einst.einheit, einheitDec()), 'Ø ' + einheitText()) +
+    stat(fmt(g.literpreis, 3), 'Ø € je Liter') +
+    stat(fmt(g.km, 0) + ' km', 'gefahren') +
+    stat(fmt(g.liter, 1) + ' l', 'getankt') +
+    stat(fmt(g.preis, 2) + ' €', 'bezahlt');
+  $('chart-verbrauch').innerHTML = chartSVG(s.filter(e => werte.get(e.id).verbrauch != null).map(e => ({ datum: e.datum, y: werte.get(e.id).verbrauch })), 1, '#f5c518');
+  $('chart-preis').innerHTML = chartSVG(s.filter(e => werte.get(e.id).literpreis != null).map(e => ({ datum: e.datum, y: werte.get(e.id).literpreis })), 3, '#cfd2da');
+  const liste = $('liste');
+  if (!s.length){ liste.innerHTML = '<li class="leer-liste">Noch kein Eintrag – der erste kommt von der Startseite.</li>'; return; }
+  liste.innerHTML = s.slice().reverse().map(e => {
+    const r = werte.get(e.id);
+    const zeile1 = [fmt(e.liter, 2) + ' l', fmt(e.preis, 2) + ' €', e.km > 0 ? fmt(e.km, 0) + ' km' : '– km'].join(' · ');
+    const zeile2 = fmt(r.literpreis, 3) + ' €/l' + (r.kostenKm != null ? ' · ' + fmt(r.kostenKm * einst.einheit, einheitDec()) + ' ' + einheitText() : '');
+    const wert = r.verbrauch != null
+      ? fmt(r.verbrauch, 1) + '<small>l/100 km</small>'
+      : '<small>' + (e.voll ? 'ohne Verbrauch' : 'zählt weiter') + '</small>';
+    return '<li><div class="eintrag">' +
+      '<span class="datum">' + datumKurz(e.datum) + (e.voll ? '' : '<span class="tag teil">Teilbetankung</span>') + (e.stand != null ? '<span class="tag">' + fmt(e.stand, 0) + ' km</span>' : '') + '</span>' +
+      '<span class="wert">' + wert + '</span><span class="details">' + zeile1 + '</span><span class="details">' + zeile2 + '</span></div>' +
+      '<div class="eintrag-aktionen">' +
+      '<button type="button" data-aendern="' + esc(e.id) + '">Ändern</button>' +
+      '<button type="button" class="gefahr" data-loeschen="' + esc(e.id) + '">Löschen</button>' +
+      '</div></li>';
+  }).join('');
+}
+$('liste').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-aendern], button[data-loeschen]'); if (!b) return;
+  const id = b.dataset.aendern || b.dataset.loeschen;
+  const e = eintraege.find(x => x.id === id); if (!e) return;
+  if (b.dataset.loeschen){
+    if (!confirm('Eintrag vom ' + datumKurz(e.datum) + ' löschen?')) return;
+    eintraege = eintraege.filter(x => x.id !== id);
+    if (bearbeite === id) formularLeeren();
+    speichere(SCHL.eintraege, eintraege); render(); renderHistorie(); showInfo('Eintrag gelöscht', 2, b);
+    return;
+  }
+  formularFuellen(e); render(); blattZu('historie'); window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => showInfo('Eintrag vom ' + datumKurz(e.datum) + ' wird bearbeitet', 3), 400);
+});
+
+// ---------- Daten ----------
+$('btn-export').addEventListener('click', async () => {
+  const inhalt = JSON.stringify({ app: 'Tankbuch', version: APP_VERSION, exportiert: new Date().toISOString(), einstellungen: einst, eintraege }, null, 1);
+  const name = 'tankbuch-' + heuteISO() + '.json';
+  const blob = new Blob([inhalt], { type: 'application/json' });
+  try {
+    const datei = new File([blob], name, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [datei] })){ await navigator.share({ files: [datei], title: 'Tankbuch' }); return; }
+  } catch (_) { /* abgebrochen oder nicht unterstützt → Download */ }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+});
+$('btn-import').addEventListener('click', () => $('f-import').click());
+$('f-import').addEventListener('change', ev => {
+  const datei = ev.target.files && ev.target.files[0]; if (!datei) return;
+  const leser = new FileReader();
+  leser.onload = () => {
+    try {
+      const d = JSON.parse(leser.result);
+      const neu = Array.isArray(d) ? d : d.eintraege;
+      if (!Array.isArray(neu)) throw new Error('kein Tankbuch');
+      const gueltig = neu.filter(e => e && typeof e.datum === 'string' && typeof e.liter === 'number' && typeof e.preis === 'number');
+      if (!gueltig.length) throw new Error('leer');
+      const ersetzen = confirm(gueltig.length + ' Einträge gefunden. Vorhandene Einträge ersetzen? Abbrechen = zusammenführen.');
+      const map = new Map(ersetzen ? [] : eintraege.map(e => [e.id, e]));
+      gueltig.forEach(e => map.set(e.id || neueId(), Object.assign({ id: e.id || neueId(), ts: e.ts || Date.now(), voll: e.voll !== false, km: null, stand: null }, e)));
+      eintraege = Array.from(map.values());
+      if (d.einstellungen && typeof d.einstellungen === 'object') einst = Object.assign(einst, d.einstellungen);
+      auswerten(eintraege); speichere(SCHL.eintraege, eintraege); speichere(SCHL.einst, einst);
+      formularLeeren(); render(); showInfo(gueltig.length + ' Einträge importiert', 3);
+    } catch (_) { showInfo('Datei ist keine Tankbuch-Sicherung', 4); }
+    ev.target.value = '';
+  };
+  leser.readAsText(datei);
+});
+$('btn-loeschen-alle').addEventListener('click', () => {
+  if (!eintraege.length) return showInfo('Es gibt nichts zu löschen', 2);
+  if (!confirm('Wirklich alle ' + eintraege.length + ' Einträge löschen? Das lässt sich nicht rückgängig machen.')) return;
+  eintraege = []; speichere(SCHL.eintraege, eintraege); formularLeeren(); render(); showInfo('Alle Einträge gelöscht', 2);
+});
+
+// ---------- Aktive Update-Prüfung (Baustein 3) ----------
+let checking = false, announced = null;
+async function checkForUpdate(manual = false){
+  if (checking) return;
+  if (!manual && document.visibilityState !== 'visible') return;
+  if (!navigator.onLine){ if (manual) showInfo('Offline – Prüfung nicht möglich', 3, $('version')); return; }
+  checking = true;
+  try {
+    const res = await fetch('index.html', { cache: 'no-store' });
+    if (!res.ok) return;
+    const m = (await res.text()).match(/APP_VERSION = '([^']+)'/);
+    if (m && m[1] !== APP_VERSION) announceUpdate(m[1], manual);
+    else if (manual) showInfo('Version ' + APP_VERSION + ' ist aktuell', 4, $('version'));
+  } catch (_) { if (manual) showInfo('Prüfung fehlgeschlagen', 3, $('version')); }
+  finally { checking = false; }
+}
+function announceUpdate(v, manual){
+  if (announced === v && !manual) return;
+  announced = v;
+  speichereEntwurf();
+  zeigeBanner('Neue Version ' + v + ' ist da');
+  const a = document.activeElement;
+  const tippt = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA');
+  if (manual || !tippt) setTimeout(() => location.reload(), manual ? 1500 : 3000);
+}
+window.addEventListener('pageshow', () => setTimeout(checkForUpdate, 800));
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible'){ aktualisiereKopf(); checkForUpdate(); }
+});
+$('version').addEventListener('click', ev => { ev.stopPropagation(); checkForUpdate(true); });
+$('version').addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); checkForUpdate(true); } });
+
+// ---------- Nach dem Update einmal melden (Baustein 4) ----------
+{
+  let vorher = null;
+  try { vorher = localStorage.getItem(SCHL.gesehen); } catch (_) {}
+  if (vorher !== APP_VERSION){
+    try { localStorage.setItem(SCHL.gesehen, APP_VERSION); } catch (_) {}
+    if (vorher) setTimeout(() => showInfo('Version ' + APP_VERSION + ' ist geladen', 4), 400);
+  }
+}
+
+// ---------- Service Worker (Baustein 1) ----------
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load', () => navigator.serviceWorker.register('./1-sw.js').catch(() => {}));
+}
+
+// ---------- Start ----------
+if (!ladeEntwurf()) fDatum.value = heuteISO();
+render();
+})();
+</script>
+</body>
+</html>
