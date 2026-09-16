@@ -13,7 +13,7 @@
 <link rel="manifest" href="./2-manifest.webmanifest">
 <title>Tankbuch</title>
 <script>
-const APP_VERSION = '3.6';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '3.7';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -104,7 +104,6 @@ input[type=date]{background:transparent;border:0;outline:0;font-size:17px;font-w
 
 /* Knöpfe */
 .aktionen{display:grid;gap:calc(8px * var(--sk));margin-top:calc(12px * var(--sk))}
-.paar{display:grid;grid-template-columns:1fr 1fr;gap:calc(8px * var(--sk))}
 .primaer{background:var(--b-knopf) center / cover no-repeat;color:var(--o-ink);font-weight:700;font-size:17px;
   padding:calc(10px + 6px * var(--sk));border-radius:16px;width:100%}
 .primaer:active{filter:brightness(.93)}
@@ -142,6 +141,10 @@ input[type=date]{background:transparent;border:0;outline:0;font-size:17px;font-w
 .tabelle th:first-child,.tabelle td:first-child{text-align:left;padding-left:12px;font-weight:600}
 .tabelle td:last-child,.tabelle th:last-child{padding-right:12px} .tabelle tr:last-child td{border-bottom:0}
 .tabelle td.hi{color:var(--o1);font-weight:700} .tabelle tbody tr:active{background:var(--karte-2)}
+.tabelle th:last-child,.tabelle td.weg{width:34px;padding-left:0;padding-right:6px}
+.muell{display:grid;place-items:center;width:32px;height:32px;margin-left:auto;color:var(--warn);opacity:.75;border-radius:8px}
+.muell svg{width:17px;height:17px} .muell:active{background:rgba(255,107,107,.15);opacity:1}
+.tabelle td{padding:10px 5px}
 i.teil{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--o2);margin-left:6px;vertical-align:1px}
 .fuss{color:var(--muted);font-size:12px;margin:8px 4px 0;display:flex;justify-content:space-between;gap:12px;align-items:center}
 .fuss.oben{margin:0 4px 8px}
@@ -210,7 +213,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v3.6</span></h1>
+    <h1>Tankbuch<span class="version" id="version" role="button" tabindex="0">v3.7</span></h1>
     <p class="fahrzeug" id="fahrzeug"></p>
   </div>
   <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen"><img data-bild="15-zahnrad.png" alt=""></button>
@@ -267,10 +270,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
   </div>
   <div class="aktionen">
     <button type="submit" class="primaer" id="btn-speichern">Eintrag speichern</button>
-    <div class="paar" id="paar" hidden>
-      <button type="button" class="sekundaer" id="btn-abbrechen">Neue Tankung</button>
-      <button type="button" class="sekundaer gefahr" id="btn-loeschen">Löschen</button>
-    </div>
+    <button type="button" class="sekundaer" id="btn-abbrechen" hidden>Neue Tankung</button>
     <button type="button" class="sekundaer" id="btn-historie"><img data-bild="14-historie.png" alt="">Historie <span class="badge" id="anzahl">0</span></button>
   </div>
 </form>
@@ -300,9 +300,9 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
       <div id="chart-monate"></div>
     </div>
     <p class="legende" id="legende-monate"></p>
-    <h3 id="tabelle-titel">Letzte Tankungen <span class="klein">Zeile antippen = ändern</span></h3>
+    <h3 id="tabelle-titel">Letzte Tankungen <span class="klein">antippen = ändern · 🗑 = löschen</span></h3>
     <div class="fuss oben" id="fuss-oben"><span class="legende-teil"><i class="teil"></i>Teilbetankung</span><button type="button" class="tabelle-alle" id="tabelle-alle-oben" hidden></button></div>
-    <div class="liste"><table class="tabelle"><thead><tr><th>Datum</th><th>l</th><th>€</th><th>km</th><th>l/100</th><th>€/l</th></tr></thead><tbody id="tabelle-koerper"></tbody></table></div>
+    <div class="liste"><table class="tabelle"><thead><tr><th>Datum</th><th>l</th><th>€</th><th>km</th><th>l/100</th><th>€/l</th><th></th></tr></thead><tbody id="tabelle-koerper"></tbody></table></div>
     <div class="fuss" id="fuss-unten" hidden><span class="legende-teil"><i class="teil"></i>Teilbetankung</span><button type="button" class="tabelle-alle" id="tabelle-alle"></button></div>
   </div>
 </section>
@@ -563,7 +563,7 @@ function aktualisiereKopf(){
   $('z-km').hidden = stand && hatVorStand();
   $('km-hilfe').textContent = stand ? 'nur beim ersten Eintrag: km seit dem letzten Tanken' : 'seit dem letzten Tanken';
   $('btn-speichern').textContent = !bearbeite ? 'Eintrag speichern' : (unveraendert() ? 'Gespeichert' : 'Änderung speichern');
-  $('paar').hidden = !bearbeite;
+  $('btn-abbrechen').hidden = !bearbeite;
 }
 function render(){ aktualisiereKopf(); aktualisiereAnzeige(); passeGroesseAn(); }
 
@@ -644,13 +644,6 @@ $('formular').addEventListener('submit', ev => {
   showInfo(meldung, 2);
 });
 $('btn-abbrechen').addEventListener('click', () => { formularLeeren(); render(); });
-$('btn-loeschen').addEventListener('click', () => {
-  const e = eintraege.find(x => x.id === bearbeite); if (!e) return;
-  if (!confirm('Eintrag vom ' + datumKurz(e.datum) + ' löschen?')) return;
-  eintraege = eintraege.filter(x => x.id !== bearbeite);
-  speichere(SCHL.eintraege, eintraege);
-  formularLeeren(); render(); if (!$('historie').hidden) renderHistorie(); showInfo('Eintrag gelöscht', 2);
-});
 
 // render() statt nur der Anzeige: sonst bleibt die Knopfbeschriftung auf "Gespeichert" stehen
 felder.forEach(f => f.addEventListener('input', () => { speichereEntwurf(); render(); }));
@@ -899,12 +892,14 @@ function renderHistorie(){
 
   // Tabelle der letzten Tankungen (immer aus allen Einträgen)
   const zeilen = (tabelleAlle ? s : s.slice(-10)).slice().reverse();
-  if (!s.length){ $('tabelle-koerper').innerHTML = '<tr><td colspan="6" class="leer-liste">Noch kein Eintrag – der erste kommt von der Startseite.</td></tr>'; }
+  if (!s.length){ $('tabelle-koerper').innerHTML = '<tr><td colspan="7" class="leer-liste">Noch kein Eintrag – der erste kommt von der Startseite.</td></tr>'; }
   else $('tabelle-koerper').innerHTML = zeilen.map(e => {
     const r = werte.get(e.id);
     return '<tr data-id="' + esc(e.id) + '"><td>' + datumMini(e.datum) + (e.voll ? '' : '<i class="teil" title="Teilbetankung"></i>') + '</td>' +
       '<td>' + fmt(e.liter, 1) + '</td><td>' + fmt(e.preis, 2) + '</td><td>' + (e.km > 0 ? fmt(e.km, 0) : '–') + '</td>' +
-      '<td class="hi">' + (r.verbrauch != null ? fmt(r.verbrauch, 1) : '–') + '</td><td>' + fmt(r.literpreis, 3) + '</td></tr>';
+      '<td class="hi">' + (r.verbrauch != null ? fmt(r.verbrauch, 1) : '–') + '</td><td>' + fmt(r.literpreis, 3) + '</td>' +
+      '<td class="weg"><button type="button" class="muell" data-weg="' + esc(e.id) + '" aria-label="Eintrag vom ' + datumKurz(e.datum) + ' löschen">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v7M14 10v7"/></svg></button></td></tr>';
   }).join('');
   const text = tabelleAlle ? 'nur die letzten 10 ›' : 'alle ' + s.length + ' anzeigen ›';
   const oben = $('tabelle-alle-oben'); oben.hidden = s.length <= 10; oben.textContent = text;
@@ -919,11 +914,20 @@ document.querySelectorAll('.tabelle-alle').forEach(b => b.addEventListener('clic
 }));
 $('btn-beispiel').addEventListener('click', () => { beispiel = !beispiel; tabelleAlle = false; renderHistorie(); window.scrollTo(0, 0); });
 $('tabelle-koerper').addEventListener('click', ev => {
-  const tr = ev.target.closest('tr[data-id]'); if (!tr) return;
-  if (beispiel){ showInfo('Beispieldaten lassen sich nicht ändern', 2, tr); return; }
-  const e = eintraege.find(x => x.id === tr.dataset.id); if (!e) return;
+  const weg = ev.target.closest('button[data-weg]');
+  const tr = ev.target.closest('tr[data-id]'); if (!tr && !weg) return;
+  if (beispiel){ showInfo('Beispieldaten lassen sich nicht ändern', 2, weg || tr); return; }
+  const id = weg ? weg.dataset.weg : tr.dataset.id;
+  const e = eintraege.find(x => x.id === id); if (!e) return;
+  if (weg){
+    if (!confirm('Eintrag vom ' + datumKurz(e.datum) + ' löschen?\n' + fmt(e.liter, 2) + ' l · ' + fmt(e.preis, 2) + ' €')) return;
+    eintraege = eintraege.filter(x => x.id !== id);
+    if (bearbeite === id) formularLeeren();
+    speichere(SCHL.eintraege, eintraege); render(); renderHistorie(); showInfo('Eintrag gelöscht', 2, weg);
+    return;
+  }
   formularFuellen(e); render(); zeigeSeite('seite-start');
-  setTimeout(() => showInfo('Eintrag vom ' + datumKurz(e.datum) + ' – ändern oder löschen', 3), 400);
+  setTimeout(() => showInfo('Eintrag vom ' + datumKurz(e.datum) + ' wird bearbeitet', 3), 400);
 });
 
 // ---------- Daten ----------
