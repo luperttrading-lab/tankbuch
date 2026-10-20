@@ -1,6 +1,6 @@
 {
-  "name": "Tankbuch",
-  "short_name": "Tankbuch",
+  "name": "Tankprotokoll",
+  "short_name": "Tankprotokoll",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -1,5 +1,5 @@
-// Tankbuch – Service Worker: eigene Dateien Netz zuerst, fremde (Schriften) Cache zuerst.
-const CACHE = 'tankbuch-v5';
+// Tankprotokoll – Service Worker: eigene Dateien Netz zuerst, fremde (Schriften) Cache zuerst.
+const CACHE = 'tankprotokoll-v6';
 const ASSETS = ['./', './index.html', './2-manifest.webmanifest', './3-icon.png', './4-icon-180.png'];
 
 self.addEventListener('install', e => {

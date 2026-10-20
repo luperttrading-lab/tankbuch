@@ -13,7 +13,7 @@
 <link rel="manifest" href="./2-manifest.webmanifest">
 <title>Tankprotokoll</title>
 <script>
-const APP_VERSION = '4.0';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '4.3';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -45,7 +45,13 @@ svg{display:block;flex:none}
 .kopf{display:flex;justify-content:space-between;align-items:center;padding:2px 2px calc(12px * var(--sk))}
 .kopf h1{font-size:calc(21px + 4px * var(--sk));font-weight:700;letter-spacing:-.02em;line-height:1.1}
 .version{font-size:12px;font-weight:500;color:var(--muted);text-decoration:underline dotted;text-underline-offset:3px;margin-left:7px;vertical-align:3px;cursor:pointer}
-.fahrzeug{color:var(--muted);font-size:15px;margin-top:2px}
+.fahrzeug{display:block;max-width:100%;color:var(--muted);font-size:15px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;padding:0}
+.fahrzeug::after{content:" ▾";font-size:11px;opacity:.7}
+.fz-wahl{margin:-4px 0 calc(10px * var(--sk))}
+.fz-wahl .chips{margin-top:0}
+.fz-wahl .chips button.plus{color:var(--o1);border-style:dashed;border-color:rgba(255,140,26,.45)}
+.einrichtung .sekundaer{margin-top:8px}
+.kopf > div:first-child{min-width:0;flex:1}
 .zahnrad{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#2a2e38;border:1px solid rgba(255,255,255,.06)}
 /* Asset 11 (Zahnrad) war dunkelgrau – auf dem dunklen Knopf unsichtbar; Form beibehalten, Farbe auf Hellgrau gesetzt */
 .zahnrad img{display:block;width:22px;height:22px}
@@ -75,6 +81,18 @@ svg{display:block;flex:none}
 .stat:active{background:rgba(255,255,255,.05)}
 .held-fuss .trenner{width:1px;align-self:stretch;background:rgba(255,255,255,.12)}
 .hinweis{margin-top:calc(7px * var(--sk));font-size:13px;color:var(--muted);text-align:center;min-height:16px}
+.einrichtung{background:var(--karte) var(--b-karte) center/cover no-repeat;border:1px solid rgba(255,138,26,.30);border-radius:var(--r);padding:14px 18px 14px}
+.einrichtung h2{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.einrichtung p{color:var(--muted);font-size:13.5px;line-height:1.35;margin:4px 0 8px}
+.einrichtung .ed-feld{margin-top:9px} .einrichtung .ed-feld > span:first-child{font-size:12px}
+.optional{font-style:normal;font-size:11px;color:#6b6f7b;margin-left:4px}
+.ed-eingabe input::placeholder,.feld input.text::placeholder{color:#555a66;font-weight:400}
+.einrichtung .ed-eingabe{padding:8px 12px}
+.ed-eingabe input.text-links{text-align:left;font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chips button{font-size:13px;padding:6px 11px;border-radius:999px;color:var(--muted);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10)}
+.chips button.aktiv{color:var(--o-ink);background:linear-gradient(135deg,var(--o1),var(--o2));border-color:transparent;font-weight:600}
+.einrichtung .primaer{margin-top:14px}
 .hinweis.warn{color:var(--warn)}
 
 /* Formular */
@@ -242,11 +260,26 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.0</span></h1>
-    <p class="fahrzeug" id="fahrzeug"></p>
+    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.3</span></h1>
+    <button type="button" class="fahrzeug" id="fahrzeug" aria-label="Fahrzeug wechseln"></button>
   </div>
   <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen"><img data-bild="15-zahnrad.png" alt=""></button>
 </header>
+
+<section class="fz-wahl" id="fz-wahl" hidden>
+  <div class="chips" id="fz-chips"></div>
+</section>
+
+<section class="einrichtung" id="einrichtung" hidden>
+  <h2 id="w-titel">Willkommen</h2>
+  <p id="w-text">Fahrzeug und Spritsorte stehen später oben in der Kopfzeile und lassen sich unter ⚙ jederzeit ändern.</p>
+  <label class="ed-feld"><span>Fahrzeug</span><span class="ed-eingabe"><input id="w-fahrzeug" type="text" class="text-links" placeholder="z. B. VW Golf" autocomplete="off"></span></label>
+  <label class="ed-feld"><span>Spitzname <em class="optional">optional</em></span><span class="ed-eingabe"><input id="w-spitzname" type="text" class="text-links" placeholder="optional" autocomplete="off"></span></label>
+  <label class="ed-feld"><span>Kraftstoff</span><span class="ed-eingabe"><input id="w-kraftstoff" type="text" class="text-links" placeholder="z. B. Super E10" autocomplete="off"></span></label>
+  <div class="chips" id="w-chips-kraftstoff"><button type="button" data-wert="Super E10">Super E10</button><button type="button" data-wert="Super E5">Super E5</button><button type="button" data-wert="Super Plus">Super Plus</button><button type="button" data-wert="Diesel">Diesel</button><button type="button" data-wert="Premium-Diesel">Premium-Diesel</button><button type="button" data-wert="HVO100">HVO100</button><button type="button" data-wert="LPG">LPG</button></div>
+  <button type="button" class="primaer" id="w-los">Los geht's</button>
+  <button type="button" class="sekundaer" id="w-abbrechen" hidden>Abbrechen</button>
+</section>
 
 <section class="held" aria-live="polite">
   <div class="held-kopf">
@@ -341,6 +374,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
     <header class="blatt-kopf"><button type="button" class="zurueck" id="btn-einstellungen-zu">‹ Zurück</button><h2>Einstellungen</h2></header>
     <div class="karte" style="margin-top:0">
       <label class="zeile"><span class="bez">Fahrzeug</span><span class="feld"><input type="text" class="text" id="e-fahrzeug"></span></label>
+      <label class="zeile"><span class="bez">Spitzname</span><span class="feld"><input type="text" class="text" id="e-spitzname" placeholder="optional"></span></label>
       <label class="zeile"><span class="bez">Kraftstoff</span><span class="feld"><input type="text" class="text" id="e-kraftstoff"></span></label>
       <div class="zeile"><span class="bez">Kilometer</span>
         <div class="segment" id="e-kmmodus" role="group" aria-label="Kilometer-Eingabe" style="margin-left:auto">
@@ -357,6 +391,13 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
       </div>
     </div>
     <p class="erklaerung">Die Bezugsgröße für die Kosten lässt sich auch auf der Startseite wechseln: auf die Kostenzahl tippen. Tageszähler heißt, du gibst die Strecke seit dem letzten Tanken ein; Kilometerstand heißt, du gibst den Gesamtstand ein und die Strecke ergibt sich aus der Differenz. Der Verbrauch wird von Volltankung zu Volltankung gerechnet, Teilbetankungen werden bis zur nächsten Volltankung zusammengefasst.</p>
+    <div class="aktionen" id="fz-entfernen-box" hidden>
+      <button type="button" class="sekundaer gefahr" id="btn-fz-entfernen">Dieses Fahrzeug entfernen</button>
+      <div class="frage" id="frage-fz" hidden>
+        <p><b>Fahrzeug entfernen?</b> <span id="frage-fz-text"></span></p>
+        <div class="ed-rechts"><button type="button" id="frage-fz-nein">Behalten</button><button type="button" class="ed-wirklich" id="frage-fz-ja">Ja, entfernen</button></div>
+      </div>
+    </div>
     <h3>Daten</h3>
     <div class="aktionen" style="margin-top:0">
       <button type="button" class="sekundaer" id="btn-export">Sicherung exportieren</button>
@@ -458,12 +499,27 @@ function neueId(){ return Date.now().toString(36) + Math.random().toString(36).s
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 let eintraege = lade(SCHL.eintraege, []);
-let einst = Object.assign({ einheit: 1, kmModus: 'trip', fahrzeug: 'Opel Astra', kraftstoff: 'Super E10', zeitraum: '12m', monatsModus: 'verursacht', migration: 0 }, lade(SCHL.einst, {}));
+const einstVorhanden = !!lade(SCHL.einst, null);        // gab es vor diesem Start schon Einstellungen?
+let einst = Object.assign({ einheit: 1, kmModus: 'trip', fahrzeug: '', kraftstoff: '', zeitraum: '12m', monatsModus: 'verursacht', migration: 0, eingerichtet: false }, lade(SCHL.einst, {}));
 if (einst.migration < 1){                                   // einmalig: alte Voreinstellungen ablösen, eigene Eingaben bleiben
   if (einst.fahrzeug === 'Ford Galaxy') einst.fahrzeug = 'Opel Astra';
   if (einst.fahrzeug === 'Opel Astra' && einst.kraftstoff === 'Diesel') einst.kraftstoff = 'Super E10';
   einst.migration = 1; speichere(SCHL.einst, einst);
 }
+// Mehrere Fahrzeuge: aus dem bisherigen Einzelfahrzeug das erste Fahrzeug machen, alle Einträge ihm zuordnen
+if (!Array.isArray(einst.fahrzeuge) || !einst.fahrzeuge.length){
+  einst.fahrzeuge = [{ id: 'fz1', name: einst.fahrzeug || '', spitzname: einst.spitzname || '', kraftstoff: einst.kraftstoff || '' }];
+  einst.aktiv = 'fz1';
+}
+if (!einst.fahrzeuge.some(f => f.id === einst.aktiv)) einst.aktiv = einst.fahrzeuge[0].id;
+{ let geaendert = false; for (const e of eintraege) if (!e.fz){ e.fz = einst.fahrzeuge[0].id; geaendert = true; }
+  if (geaendert) speichere(SCHL.eintraege, eintraege); }
+speichere(SCHL.einst, einst);
+function aktivFz(){ return einst.fahrzeuge.find(f => f.id === einst.aktiv) || einst.fahrzeuge[0]; }
+function fzText(f){ return [f.spitzname ? '„' + f.spitzname + '“' : '', f.name, f.kraftstoff].filter(Boolean).join(' · '); }
+function fzKurz(f){ return f.spitzname || f.name || 'Fahrzeug'; }
+function meine(){ return eintraege.filter(e => e.fz === einst.aktiv); }
+function festschreiben(){ for (const f of einst.fahrzeuge) auswerten(eintraege.filter(e => e.fz === f.id)); }   // km je Fahrzeug getrennt ableiten
 let bearbeite = null;   // id des Eintrags, der gerade bearbeitet wird
 
 const fDatum = $('f-datum'), fLiter = $('f-liter'), fPreis = $('f-preis'), fKm = $('f-km'), fStand = $('f-stand'), fVoll = $('f-voll');
@@ -532,7 +588,7 @@ function unveraendert(){
   return alt.datum === neu.datum && gleich(alt.liter, neu.liter) && gleich(alt.preis, neu.preis)
       && gleich(alt.km, neu.km) && gleich(alt.stand, neu.stand) && !!alt.voll === !!neu.voll;
 }
-function hatVorStand(){ return eintraege.some(e => e.id !== bearbeite && e.stand != null); }
+function hatVorStand(){ return meine().some(e => e.id !== bearbeite && e.stand != null); }
 
 function formularLeeren(){
   bearbeite = null;
@@ -553,8 +609,8 @@ function einheitText(){ return einst.einheit === 1 ? '€ je km' : '€ je ' + e
 function aktualisiereAnzeige(){
   const temp = entwurfEintrag();
   const leer = !bearbeite && temp.liter == null && temp.preis == null && temp.km == null && temp.stand == null;
-  if (leer && eintraege.length){ zeigeLetzten(); return; }
-  const basis = eintraege.filter(e => e.id !== temp.id);
+  if (leer && meine().length){ zeigeLetzten(); return; }
+  const basis = meine().filter(e => e.id !== temp.id);
   const { werte } = auswerten(basis.concat([temp]));
   const r = werte.get(temp.id);
   $('held-marke').textContent = bearbeite ? (unveraendert() ? 'Gespeichert ' + datumKurz(temp.datum) : 'Nicht gespeichert') : datumKurz(heuteISO());
@@ -576,7 +632,7 @@ function aktualisiereAnzeige(){
 
 // Formular leer: die Kachel zeigt die letzte gespeicherte Tankung, bis etwas Neues getippt wird
 function zeigeLetzten(){
-  const { s, werte } = auswerten(eintraege);
+  const { s, werte } = auswerten(meine());
   const e = s[s.length - 1], r = werte.get(e.id);
   $('held-marke').textContent = 'Letzte Tankung ' + datumKurz(e.datum);
   $('a-verbrauch').textContent = fmt(r.verbrauch, 1);
@@ -590,8 +646,8 @@ function zeigeLetzten(){
   else h.textContent = 'Gespeichert – ' + fmt(r.spanLiter, 2) + ' l auf ' + fmt(r.spanKm, 0) + ' km.';
 }
 function aktualisiereKopf(){
-  $('fahrzeug').textContent = [einst.fahrzeug, einst.kraftstoff].filter(Boolean).join(' · ');
-  $('anzahl').textContent = eintraege.length;
+  $('fahrzeug').textContent = fzText(aktivFz());
+  $('anzahl').textContent = meine().length;
   $('version').textContent = 'v' + APP_VERSION;
   document.querySelectorAll('#e-einheit button').forEach(b => b.classList.toggle('aktiv', Number(b.dataset.einheit) === einst.einheit));
   document.querySelectorAll('#e-kmmodus button').forEach(b => b.classList.toggle('aktiv', b.dataset.modus === einst.kmModus));
@@ -602,7 +658,63 @@ function aktualisiereKopf(){
   $('btn-speichern').textContent = !bearbeite ? 'Eintrag speichern' : (unveraendert() ? 'Gespeichert' : 'Änderung speichern');
   $('btn-abbrechen').hidden = !bearbeite;
 }
-function render(){ aktualisiereKopf(); aktualisiereAnzeige(); passeGroesseAn(); }
+let neuesFz = false, fzWahlOffen = false;
+function render(){
+  const karte = !einst.eingerichtet || neuesFz;
+  $('einrichtung').hidden = !karte;
+  document.querySelector('.held').hidden = karte;
+  $('formular').hidden = karte;
+  $('fz-wahl').hidden = karte || !fzWahlOffen;
+  $('w-titel').textContent = neuesFz ? 'Neues Fahrzeug' : 'Willkommen';
+  $('w-text').textContent = neuesFz ? 'Wird zusätzlich angelegt. Umschalten jederzeit oben über den Fahrzeugnamen.'
+                                    : 'Fahrzeug und Spritsorte stehen später oben in der Kopfzeile und lassen sich unter ⚙ jederzeit ändern.';
+  $('w-los').textContent = neuesFz ? 'Anlegen' : "Los geht's";
+  $('w-abbrechen').hidden = !neuesFz;
+  if (karte){ $('fahrzeug').textContent = neuesFz ? 'Neues Fahrzeug' : 'Erste Einrichtung'; $('version').textContent = 'v' + APP_VERSION; passeGroesseAn(); return; }
+  if (fzWahlOffen) fzChips();
+  aktualisiereKopf(); aktualisiereAnzeige(); passeGroesseAn();
+}
+function fzChips(){
+  $('fz-chips').innerHTML = einst.fahrzeuge.map(f => '<button type="button" data-fz="' + esc(f.id) + '"' + (f.id === einst.aktiv ? ' class="aktiv"' : '') + '>' + esc(fzKurz(f)) + '</button>').join('') +
+    '<button type="button" class="plus" data-fz="__neu">＋ Fahrzeug</button>';
+}
+function formularBelegt(){ const t = entwurfEintrag(); return !bearbeite && (t.liter != null || t.preis != null || t.km != null || t.stand != null); }
+$('fahrzeug').addEventListener('click', () => { if (!einst.eingerichtet || neuesFz) return; fzWahlOffen = !fzWahlOffen; render(); });
+$('fz-chips').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-fz]'); if (!b) return;
+  if ((formularBelegt() || (bearbeite && !unveraendert()))) return showInfo('Erst speichern oder „Neue Tankung“ – sonst geht die Eingabe verloren', 3, b);
+  fzWahlOffen = false;
+  if (b.dataset.fz === '__neu'){
+    neuesFz = true; ['w-fahrzeug', 'w-spitzname', 'w-kraftstoff'].forEach(id => $(id).value = ''); chipsMarkieren('w-chips-kraftstoff', $('w-kraftstoff'));
+    render(); return;
+  }
+  if (b.dataset.fz !== einst.aktiv){ einst.aktiv = b.dataset.fz; speichere(SCHL.einst, einst); formularLeeren(); showInfo(fzText(aktivFz()), 2); }
+  render();
+});
+$('w-abbrechen').addEventListener('click', () => { neuesFz = false; render(); });
+function chipsMarkieren(listeId, feld){
+  document.querySelectorAll('#' + listeId + ' button').forEach(b => b.classList.toggle('aktiv', b.dataset.wert.toLowerCase() === feld.value.trim().toLowerCase()));
+}
+[['w-chips-kraftstoff', 'w-kraftstoff']].forEach(([liste, feldId]) => {
+  const feld = $(feldId);
+  $(liste).addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; feld.value = b.dataset.wert; chipsMarkieren(liste, feld); });
+  feld.addEventListener('input', () => chipsMarkieren(liste, feld));
+});
+$('w-los').addEventListener('click', () => {
+  const f = $('w-fahrzeug').value.trim(), k = $('w-kraftstoff').value.trim();
+  if (!f) return showInfo('Wie heißt das Fahrzeug?', 3, $('w-fahrzeug'));
+  if (!k) return showInfo('Welcher Kraftstoff?', 3, $('w-kraftstoff'));
+  const sp = $('w-spitzname').value.trim();
+  if (neuesFz){
+    const nf = { id: 'fz' + neueId(), name: f, spitzname: sp, kraftstoff: k };
+    einst.fahrzeuge.push(nf); einst.aktiv = nf.id; neuesFz = false; formularLeeren();
+  } else {
+    Object.assign(aktivFz(), { name: f, spitzname: sp, kraftstoff: k }); einst.eingerichtet = true;
+  }
+  speichere(SCHL.einst, einst);
+  const a = document.activeElement; if (a && a.blur) a.blur();
+  render(); showInfo(fzText(aktivFz()), 3);
+});
 
 // Startbildschirm ohne Scrollen: Abstände und Zifferngröße an die Bildschirmhöhe anpassen.
 // Wirkt nur, solange Historie und Einstellungen zu sind – dort wird ohnehin gescrollt.
@@ -671,11 +783,11 @@ $('formular').addEventListener('submit', ev => {
     eintraege[i] = Object.assign({}, eintraege[i], t, { id: bearbeite });
     meldung = 'Änderung gespeichert';
   } else {
-    t.id = neueId(); t.ts = Date.now(); eintraege.push(t);
+    t.id = neueId(); t.ts = Date.now(); t.fz = einst.aktiv; eintraege.push(t);
     bearbeite = t.id;                      // Werte bleiben stehen und bleiben änderbar
     meldung = 'Eintrag gespeichert';
   }
-  auswerten(eintraege);                    // abgeleitete km festschreiben
+  festschreiben();                         // abgeleitete km festschreiben (je Fahrzeug)
   speichere(SCHL.eintraege, eintraege);
   speichereEntwurf(); render(); if (!$('historie').hidden) renderHistorie();
   showInfo(meldung, 2);
@@ -710,14 +822,29 @@ function zeigeSeite(id){
 $('btn-historie').addEventListener('click', () => { renderHistorie(); zeigeSeite('historie'); });
 $('btn-historie-zu').addEventListener('click', () => { beispiel = false; zeigeSeite('seite-start'); });
 $('btn-einstellungen').addEventListener('click', () => {
-  $('e-fahrzeug').value = einst.fahrzeug || ''; $('e-kraftstoff').value = einst.kraftstoff || '';
+  const fz = aktivFz(); $('e-fahrzeug').value = fz.name || ''; $('e-kraftstoff').value = fz.kraftstoff || ''; $('e-spitzname').value = fz.spitzname || '';
+  $('fz-entfernen-box').hidden = einst.fahrzeuge.length < 2; $('frage-fz').hidden = true; $('btn-fz-entfernen').hidden = false;
+  $('btn-loeschen-alle').textContent = einst.fahrzeuge.length > 1 ? 'Alle Einträge von ' + fzKurz(fz) + ' löschen' : 'Alle Einträge löschen';
   zeigeSeite('einstellungen');
 });
 function einstellungenSichern(){
-  einst.fahrzeug = $('e-fahrzeug').value.trim(); einst.kraftstoff = $('e-kraftstoff').value.trim();
+  const fz = aktivFz();
+  fz.name = $('e-fahrzeug').value.trim() || fz.name; fz.kraftstoff = $('e-kraftstoff').value.trim(); fz.spitzname = $('e-spitzname').value.trim(); einst.eingerichtet = true;
   speichere(SCHL.einst, einst); render();
 }
 $('btn-einstellungen-zu').addEventListener('click', () => { einstellungenSichern(); zeigeSeite('seite-start'); });
+$('btn-fz-entfernen').addEventListener('click', () => {
+  const n = meine().length;
+  $('frage-fz-text').textContent = fzText(aktivFz()) + (n ? ' – mit ' + n + (n === 1 ? ' Eintrag.' : ' Einträgen.') : ' – ohne Einträge.');
+  $('frage-fz').hidden = false; $('btn-fz-entfernen').hidden = true;
+});
+$('frage-fz-nein').addEventListener('click', () => { $('frage-fz').hidden = true; $('btn-fz-entfernen').hidden = false; });
+$('frage-fz-ja').addEventListener('click', () => {
+  const weg = einst.aktiv, name = fzKurz(aktivFz());
+  eintraege = eintraege.filter(e => e.fz !== weg); einst.fahrzeuge = einst.fahrzeuge.filter(f => f.id !== weg); einst.aktiv = einst.fahrzeuge[0].id;
+  speichere(SCHL.eintraege, eintraege); speichere(SCHL.einst, einst); formularLeeren();
+  zeigeSeite('seite-start'); render(); showInfo(name + ' entfernt', 2);
+});
 $('e-kmmodus').addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
   einst.kmModus = b.dataset.modus; speichere(SCHL.einst, einst); render();
@@ -892,7 +1019,7 @@ function zeilenEditor(e){
     '</div></td></tr>';
 }
 function renderHistorie(){
-  const quelle = beispiel ? beispielEintraege() : eintraege;
+  const quelle = beispiel ? beispielEintraege() : meine();
   const { s, werte } = auswerten(quelle);
   $('beispiel-hinweis').hidden = !beispiel;
   $('btn-beispiel').classList.toggle('an', beispiel);
@@ -999,7 +1126,7 @@ function editorAktion(was, knopf){
   if (!(neu.preis > 0)) return showInfo('Bezahlter Preis fehlt', 3, knopf);
   if ($('ed-stand') ? !(neu.stand > 0) : !(neu.km > 0)) return showInfo('Kilometer fehlen', 3, knopf);
   Object.assign(e, neu);
-  auswerten(eintraege); speichere(SCHL.eintraege, eintraege);
+  festschreiben(); speichere(SCHL.eintraege, eintraege);
   if (bearbeite === e.id) formularFuellen(e);                         // Startseite zeigt denselben Eintrag: nachziehen
   zeileOffen = null; render(); renderHistorie(); showInfo('Änderung gespeichert', 2, knopf);
 }
@@ -1020,11 +1147,24 @@ $('btn-import').addEventListener('click', () => $('f-import').click());
 let importWartend = null;
 function importAusfuehren(ersetzen){
   const w = importWartend; if (!w) return;
-  const map = new Map(ersetzen ? [] : eintraege.map(e => [e.id, e]));
-  w.gueltig.forEach(e => map.set(e.id || neueId(), Object.assign({ id: e.id || neueId(), ts: e.ts || Date.now(), voll: e.voll !== false, km: null, stand: null }, e)));
+  // Fahrzeuge der Datei den eigenen zuordnen – gleiche Fahrzeugbezeichnung = gleiches Auto
+  const fe = w.einstellungen || {};
+  const fremde = Array.isArray(fe.fahrzeuge) && fe.fahrzeuge.length ? fe.fahrzeuge
+               : [{ id: '__alt', name: fe.fahrzeug || '', spitzname: fe.spitzname || '', kraftstoff: fe.kraftstoff || '' }];
+  const zuordnung = {};
+  for (const f of fremde){
+    const key = (f.name || '').trim().toLowerCase();
+    let lokal = key ? einst.fahrzeuge.find(x => (x.name || '').trim().toLowerCase() === key) : null;
+    if (!lokal && !key) lokal = aktivFz();                                   // Sicherung ohne Fahrzeugnamen → aktuelles Fahrzeug
+    if (!lokal){ lokal = { id: 'fz' + neueId(), name: f.name, spitzname: f.spitzname || '', kraftstoff: f.kraftstoff || '' }; einst.fahrzeuge.push(lokal); }
+    zuordnung[f.id] = lokal.id;
+  }
+  const fallback = zuordnung[fremde[0].id];
+  const behalten = ersetzen ? eintraege.filter(e => !Object.values(zuordnung).includes(e.fz)) : eintraege;   // Ersetzen betrifft nur die Fahrzeuge aus der Datei
+  const map = new Map(behalten.map(e => [e.id, e]));
+  w.gueltig.forEach(e => { const id = e.id || neueId(); map.set(id, Object.assign({ id, ts: e.ts || Date.now(), voll: e.voll !== false, km: null, stand: null }, e, { fz: zuordnung[e.fz] || fallback })); });
   eintraege = Array.from(map.values());
-  if (w.einstellungen && typeof w.einstellungen === 'object') einst = Object.assign(einst, w.einstellungen);
-  auswerten(eintraege); speichere(SCHL.eintraege, eintraege); speichere(SCHL.einst, einst);
+  festschreiben(); speichere(SCHL.eintraege, eintraege); speichere(SCHL.einst, einst);
   importWartend = null; $('frage-import').hidden = true;
   formularLeeren(); render(); showInfo(w.gueltig.length + ' Einträge ' + (ersetzen ? 'übernommen' : 'zusammengeführt'), 3, $('btn-import'));
 }
@@ -1050,13 +1190,14 @@ $('f-import').addEventListener('change', ev => {
   leser.readAsText(datei);
 });
 $('btn-loeschen-alle').addEventListener('click', () => {
-  if (!eintraege.length) return showInfo('Es gibt nichts zu löschen', 2, $('btn-loeschen-alle'));
-  $('frage-alle-text').textContent = eintraege.length + (eintraege.length === 1 ? ' Eintrag' : ' Einträge') + ' würden verschwinden.';
+  const n = meine().length;
+  if (!n) return showInfo('Es gibt nichts zu löschen', 2, $('btn-loeschen-alle'));
+  $('frage-alle-text').textContent = n + (n === 1 ? ' Eintrag' : ' Einträge') + (einst.fahrzeuge.length > 1 ? ' von ' + fzKurz(aktivFz()) : '') + ' würden verschwinden.';
   $('frage-alle').hidden = false; $('btn-loeschen-alle').hidden = true;
 });
 $('frage-alle-nein').addEventListener('click', () => { $('frage-alle').hidden = true; $('btn-loeschen-alle').hidden = false; });
 $('frage-alle-ja').addEventListener('click', () => {
-  eintraege = []; speichere(SCHL.eintraege, eintraege); formularLeeren(); render();
+  eintraege = eintraege.filter(e => e.fz !== einst.aktiv); speichere(SCHL.eintraege, eintraege); formularLeeren(); render();
   $('frage-alle').hidden = true; $('btn-loeschen-alle').hidden = false; showInfo('Alle Einträge gelöscht', 2, $('btn-loeschen-alle'));
 });
 
@@ -1109,6 +1250,8 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
 
 // ---------- Start ----------
 if (!ladeEntwurf()) fDatum.value = heuteISO();
+if (einstVorhanden){ const fz = aktivFz(); $('w-fahrzeug').value = fz.name || ''; $('w-kraftstoff').value = fz.kraftstoff || ''; $('w-spitzname').value = fz.spitzname || ''; }   // nur vorbelegen, wenn schon etwas gespeichert war
+chipsMarkieren('w-chips-kraftstoff', $('w-kraftstoff'));
 tagPruefen();
 render();
 })();
