@@ -34,6 +34,13 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
   Prüfwert: 50 € am 06.02., 72 € am 03.03. → Feb 113,36 €, März 8,64 €, Summe 122 €.
 - Beispielhistorie: 24 Monate, echte ADAC-Monatsmittel Super E10 (Stand 01.09.2026), schreibt nie in den Speicher.
 
+## Lutz' Fahrzeug
+- Ford Galaxy 2.0 EcoBlue Bi-Turbo Diesel, 177 kW (240 PS), Frontantrieb, Erstzulassung 05/2019.
+- **Dieseltank 63 l** (Ford-Betriebsanleitung, „Füllmengen – 2.0L EcoBlue“: 63 l Frontantrieb, 61 l Allrad).
+  Online stehen oft 70 l – das ist die ältere TDCi-Generation ohne AdBlue.
+- Bordcomputer-Ø lag im Okt. 2026 bei 7,1 statt 6,2 l/100 km (913 km, 56,67 l voll zu voll), also ~14 % zu hoch.
+  Bisher nur ein Intervall – die App rechnet richtig, nicht an den Bordcomputer anpassen.
+
 ## Bewusste Entscheidungen (nicht zurückbauen)
 - **Kein `position: fixed`-Overlay** für Seiten oder Dialoge – ging in Lutz' Vorschau nicht auf. Seiten werden per `hidden` gewechselt.
 - **Keine `confirm()`/`alert()`** – Rückfragen sind Karten im eigenen Stil (rote Karte „Wirklich löschen?“).
