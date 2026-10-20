@@ -4,6 +4,11 @@ PWA zum Erfassen von Tankungen (Verbrauch, Kosten, Historie). Nutzer: Lutz, test
 deployt über GitHub Pages. Sprache der App und der Antworten: Deutsch, per Du.
 Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
 
+## Kostenzeile (jede Antwort)
+- Am Ende jeder Antwort `python3 tools/kosten.py` im Projektverzeichnis ausführen.
+- Die Ausgabe **wörtlich** als letzte Zeile setzen: roh, nicht im Codeblock, nicht umformatieren.
+- Details und Fallbacks stehen im Skill `kostenzeile`. Fehlt `tools/kosten.py`, Skill-Kopie nach `tools/` legen.
+
 ## Dateien
 - `index.html` – die ganze App: Markup, CSS, JS, alle 11 Bilder als Data-URIs eingebettet (~280 KB)
 - `1-sw.js` – Service Worker, eigene Dateien Netz zuerst; Cache-Name bei Asset-Änderungen hochzählen
