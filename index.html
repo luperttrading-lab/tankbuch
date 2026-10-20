@@ -13,7 +13,7 @@
 <link rel="manifest" href="./2-manifest.webmanifest">
 <title>Tankprotokoll</title>
 <script>
-const APP_VERSION = '4.3';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '4.4';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -260,7 +260,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.3</span></h1>
+    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.4</span></h1>
     <button type="button" class="fahrzeug" id="fahrzeug" aria-label="Fahrzeug wechseln"></button>
   </div>
   <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen"><img data-bild="15-zahnrad.png" alt=""></button>
@@ -768,6 +768,9 @@ window.addEventListener('orientationchange', () => setTimeout(passeGroesseAn, 25
 
 // ---------- Speichern / Bearbeiten / Löschen ----------
 function fehler(text, feld){ showInfo(text, 3, feld); feld.focus(); }
+// Weicher Hinweis gegen Zahlendreher: Tank 63 l Nennvolumen, bis zum Rand schon 64 l – nie sperren
+const LITER_HINWEIS = 66;
+let literBestaetigt = null;                // gleicher Wert ein zweites Mal gespeichert = gewollt
 $('formular').addEventListener('submit', ev => {
   ev.preventDefault();
   const a = document.activeElement; if (a && a.blur) a.blur();     // Tastatur schließen, sonst misst die Anpassung falsch
@@ -777,6 +780,11 @@ $('formular').addEventListener('submit', ev => {
   if (einst.kmModus === 'stand'){ if (!(t.stand > 0)) return fehler('Kilometerstand fehlt', fStand); }
   else if (!(t.km > 0)) return fehler('Gefahrene Kilometer fehlen', fKm);
   if (unveraendert()){ showInfo('Daten gespeichert – nichts geändert', 2); return; }
+  if (t.liter >= LITER_HINWEIS && literBestaetigt !== t.liter){
+    literBestaetigt = t.liter;
+    showInfo(fmt(t.liter, 2) + ' l – mehr als in den Tank passt. Zahlendreher? Sonst nochmal speichern.', 5, fLiter);
+    return;
+  }
   let meldung;
   if (bearbeite){
     const i = eintraege.findIndex(e => e.id === bearbeite);

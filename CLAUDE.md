@@ -63,5 +63,7 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
 
 ## Offen
 - Querformat passt nicht ohne Scrollen.
-- Plausibilitätsprüfung gegen Zahlendreher (Kilometerstand, Liter, Preis) fehlt.
+- Plausibilitätsprüfung gegen Zahlendreher: Liter ab 66 l gibt es seit v4.4 (`LITER_HINWEIS`, Hinweis-Banner,
+  zweites Speichern mit gleichem Wert übernimmt). Kilometerstand und Preis fehlen noch.
+  Grenze gilt für alle Fahrzeuge gleich – bei einem zweiten Fahrzeug ggf. Tankvolumen je Fahrzeug.
 - iOS kürzt den Home-Bildschirm-Namen evtl. („Tankprotoko…“) – am Gerät prüfen.
