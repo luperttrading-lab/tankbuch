@@ -38,6 +38,8 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
 - Ford Galaxy 2.0 EcoBlue Bi-Turbo Diesel, 177 kW (240 PS), Frontantrieb, Erstzulassung 05/2019.
 - **Dieseltank 63 l** (Ford-Betriebsanleitung, „Füllmengen – 2.0L EcoBlue“: 63 l Frontantrieb, 61 l Allrad).
   Online stehen oft 70 l – das ist die ältere TDCi-Generation ohne AdBlue.
+  Nennvolumen, keine harte Grenze: Lutz hat sehr leer und bis zum Rand schon 64 l getankt
+  (Einfüllrohr fasst zusätzlich). Plausibilitätsprüfung daher nur als weicher Hinweis, nie als Sperre.
 - Bordcomputer-Ø lag im Okt. 2026 bei 7,1 statt 6,2 l/100 km (913 km, 56,67 l voll zu voll), also ~14 % zu hoch.
   Bisher nur ein Intervall – die App rechnet richtig, nicht an den Bordcomputer anpassen.
 
