@@ -13,7 +13,7 @@
 <link rel="manifest" href="./2-manifest.webmanifest">
 <title>Tankprotokoll</title>
 <script>
-const APP_VERSION = '4.5';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '4.6';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -55,6 +55,17 @@ svg{display:block;flex:none}
 .zahnrad{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#2a2e38;border:1px solid rgba(255,255,255,.06)}
 /* Asset 11 (Zahnrad) war dunkelgrau – auf dem dunklen Knopf unsichtbar; Form beibehalten, Farbe auf Hellgrau gesetzt */
 .zahnrad img{display:block;width:22px;height:22px}
+.kopf-knoepfe{display:flex;gap:10px;flex:none}
+.kamera{color:var(--o1)} .kamera svg{width:21px;height:21px}
+.foto-karte{border-radius:var(--r);background:var(--karte) var(--b-graphit) center/cover no-repeat;border:1px solid rgba(255,138,26,.45);padding:calc(12px * var(--sk)) 16px}
+.foto-karte h2{font-size:18px;font-weight:700;margin-bottom:calc(6px * var(--sk))}
+.fk-werte{display:grid;grid-template-columns:1fr auto;gap:calc(4px * var(--sk)) 12px;font-size:16px}
+.fk-werte span{color:var(--muted)} .fk-werte b{text-align:right;font-variant-numeric:tabular-nums}
+.fk-pruef{font-size:14px;line-height:1.35;margin:calc(8px * var(--sk)) 0 calc(10px * var(--sk));color:#7fd38b}
+.fk-pruef.schlecht{color:var(--warn)}
+.foto-karte .ed-rechts{justify-content:flex-end}
+.foto-karte button{font-size:15px;font-weight:600;padding:9px 16px;border-radius:11px;color:var(--text);background:rgba(255,255,255,.06)}
+.foto-karte .fk-ja{background:linear-gradient(135deg,var(--o1),var(--o2));color:var(--o-ink)}
 
 /* Kachel Verbrauch */
 .held{position:relative;overflow:hidden;border-radius:var(--r);
@@ -110,8 +121,6 @@ svg{display:block;flex:none}
 .feld input.text{font-weight:400;font-size:17px;max-width:200px}
 .feld input::placeholder{color:#4c505c;font-weight:400}
 .feld i{font-style:normal;color:var(--muted);font-size:14px;width:20px;flex:none}
-.foto{flex:none;align-self:center;width:32px;height:32px;padding:0;border:0;border-radius:9px;background:var(--o-weich);color:var(--o1);display:grid;place-items:center}
-.foto svg{width:19px;height:19px}
 input[type=date]{background:transparent;border:0;outline:0;font-size:17px;font-weight:600;color:var(--text);
   text-align:right;padding:calc(9px * var(--sk)) 0;-webkit-appearance:none;appearance:none;flex:1}
 .schalter input{position:absolute;opacity:0;width:0;height:0}
@@ -262,10 +271,13 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.5</span></h1>
+    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.6</span></h1>
     <button type="button" class="fahrzeug" id="fahrzeug" aria-label="Fahrzeug wechseln"></button>
   </div>
-  <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen"><img data-bild="15-zahnrad.png" alt=""></button>
+  <div class="kopf-knoepfe">
+    <button type="button" class="zahnrad kamera" id="btn-foto" aria-label="Zapfsäule fotografieren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+    <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen"><img data-bild="15-zahnrad.png" alt=""></button>
+  </div>
 </header>
 
 <section class="fz-wahl" id="fz-wahl" hidden>
@@ -304,6 +316,17 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
   <div class="hinweis" id="a-hinweis"></div>
 </section>
 
+<section class="foto-karte" id="foto-karte" hidden aria-live="polite">
+  <h2 id="fk-titel">Zapfsäule erkannt</h2>
+  <div class="fk-werte">
+    <span>Getankt</span><b id="fk-liter">–</b>
+    <span>Bezahlt</span><b id="fk-betrag">–</b>
+    <span>Literpreis</span><b id="fk-preis">–</b>
+  </div>
+  <p class="fk-pruef" id="fk-pruef"></p>
+  <div class="ed-rechts"><button type="button" id="fk-verwerfen">Verwerfen</button><button type="button" class="fk-ja" id="fk-uebernehmen">Übernehmen</button></div>
+</section>
+
 <form id="formular" autocomplete="off" novalidate>
   <input type="file" accept="image/*" id="f-foto" hidden>
   <div class="karte">
@@ -313,7 +336,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
     </label>
     <label class="zeile">
       <span class="ikone"><img data-bild="9-zapfsaeule.png" alt=""></span>
-      <span class="bez">Getankt</span><span class="feld"><input type="text" inputmode="decimal" id="f-liter" placeholder="0,00"><i>l</i><button type="button" class="foto" id="btn-foto" aria-label="Zapfsäule fotografieren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button></span>
+      <span class="bez">Getankt</span><span class="feld"><input type="text" inputmode="decimal" id="f-liter" placeholder="0,00"><i>l</i></span>
     </label>
     <label class="zeile">
       <span class="ikone"><img data-bild="11-euro.png" alt=""></span>
@@ -661,11 +684,12 @@ function aktualisiereKopf(){
   $('btn-speichern').textContent = !bearbeite ? 'Eintrag speichern' : (unveraendert() ? 'Gespeichert' : 'Änderung speichern');
   $('btn-abbrechen').hidden = !bearbeite;
 }
-let neuesFz = false, fzWahlOffen = false;
+let neuesFz = false, fzWahlOffen = false, fotoErgebnis = null;   // fotoErgebnis: Karte statt Verbrauchsanzeige
 function render(){
   const karte = !einst.eingerichtet || neuesFz;
   $('einrichtung').hidden = !karte;
-  document.querySelector('.held').hidden = karte;
+  document.querySelector('.held').hidden = karte || !!fotoErgebnis;
+  $('foto-karte').hidden = karte || !fotoErgebnis;
   $('formular').hidden = karte;
   $('fz-wahl').hidden = karte || !fzWahlOffen;
   $('w-titel').textContent = neuesFz ? 'Neues Fahrzeug' : 'Willkommen';
@@ -934,14 +958,32 @@ fFoto.addEventListener('change', async () => {
     c.width = Math.round(im.naturalWidth * f); c.height = Math.round(im.naturalHeight * f);
     c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
     await new Promise(r => setTimeout(r, 30));                                   // Banner erst zeichnen lassen
-    const e = erkenneZapfsaeule(c);
-    if (e && e.stimmt){
-      fLiter.value = fmt(e.liter, 2); fPreis.value = fmt(e.betrag, 2);
-      speichereEntwurf(); render();
-      showInfo('Erkannt: ' + fmt(e.liter, 2) + ' l · ' + fmt(e.betrag, 2) + ' € (' + fmt(e.preis, 3) + ' €/l) – bitte prüfen', 5);
-    } else showInfo('Nicht sicher erkannt – bitte von Hand eintragen', 4);
-  } catch (_){ showInfo('Foto ließ sich nicht lesen', 3); }
+    zeigeFotoErgebnis(erkenneZapfsaeule(c) || { stimmt: false });
+  } catch (_){ zeigeFotoErgebnis({ stimmt: false }); }
   finally { URL.revokeObjectURL(url); }
+});
+function zeigeFotoErgebnis(e){
+  if (updateEl.classList.contains('info')) ausblenden();     // „Lese Foto …“ weg, Update-Banner bleibt
+  fotoErgebnis = e;
+  const da = e.liter > 0;
+  $('fk-titel').textContent = e.stimmt ? 'Zapfsäule erkannt' : 'Nicht sicher erkannt';
+  $('fk-liter').textContent = da ? fmt(e.liter, 2) + ' l' : '–';
+  $('fk-betrag').textContent = da ? fmt(e.betrag, 2) + ' €' : '–';
+  $('fk-preis').textContent = da ? fmt(e.preis, 3) + ' €/l' : '–';
+  const p = $('fk-pruef');
+  p.classList.toggle('schlecht', !e.stimmt);
+  p.textContent = e.stimmt ? '✓ ' + fmt(e.liter, 2) + ' l × ' + fmt(e.preis, 3) + ' €/l = ' + fmt(e.betrag, 2) + ' €'
+    : (da ? 'Liter × Preis ergibt nicht den Betrag – bitte von Hand eintragen.' : 'Keine Zapfsäulen-Anzeige gefunden – bitte von Hand eintragen.');
+  $('fk-uebernehmen').hidden = !e.stimmt;
+  $('fk-verwerfen').textContent = e.stimmt ? 'Verwerfen' : 'Schließen';
+  render();
+}
+$('fk-verwerfen').addEventListener('click', () => { fotoErgebnis = null; render(); });
+$('fk-uebernehmen').addEventListener('click', () => {
+  const e = fotoErgebnis; fotoErgebnis = null;
+  fLiter.value = fmt(e.liter, 2); fPreis.value = fmt(e.betrag, 2);
+  speichereEntwurf(); render();
+  showInfo('Übernommen – Kilometer eintragen, dann speichern', 3);
 });
 
 // ---------- Speichern / Bearbeiten / Löschen ----------

@@ -51,9 +51,10 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
   Scrollsperre `html.fest` nur wenn nachweislich passend. Tastatur offen → keine Neuberechnung (`visualViewport`).
 - iOS: Knöpfe bekommen beim Antippen keinen Fokus → vor Messungen Feld per `blur()` lösen.
 - 30-Tage-Linie im Monatsdiagramm wurde wieder entfernt (redundant zu den Säulen).
-- Zapfsäulen-Foto (seit v4.5, Kamera-Knopf in „Getankt“): **offline, ohne KI und ohne Bibliothek** –
+- Zapfsäulen-Foto (seit v4.5; Kamera-Knopf seit v4.6 in der Kopfzeile neben ⚙): **offline, ohne KI und ohne Bibliothek** –
   LCD-Flächen per Weißabgleich + Farbmaske, Ziffern als 7 Segmente abgetastet (`erkenneZapfsaeule()`).
-  Übernommen wird nur, wenn Betrag = Liter × Preis (±1 ct) aufgeht; sonst nichts eintragen, Hinweis zeigen.
+  Ergebnis erscheint als Karte (`#foto-karte`) **an Stelle der Verbrauchskarte** – bewusst kein fixed-Popup.
+  „Übernehmen“ nur, wenn Betrag = Liter × Preis (±1 ct) aufgeht; sonst nur „Schließen“, nichts eintragen.
   Probiert Drehwinkel 0, ±3, ±6, ±9°. Bild vorher auf 1600 px lange Seite verkleinern. Speichern bleibt beim Nutzer.
 - Mehrere Fahrzeuge ja, Sync zwischen Geräten nein: Austausch über Export/Import „Zusammenführen“,
   Zuordnung über den Fahrzeugnamen (Groß/Klein egal). CNG/Strom bewusst nicht als Kraftstoff (kg/kWh).
