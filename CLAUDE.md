@@ -43,6 +43,27 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
 - Bordcomputer-Ø lag im Okt. 2026 bei 7,1 statt 6,2 l/100 km (913 km, 56,67 l voll zu voll), also ~14 % zu hoch.
   Bisher nur ein Intervall – die App rechnet richtig, nicht an den Bordcomputer anpassen.
 
+## Fachwissen Zapfsäule (recherchiert Nov. 2026)
+- **Preis vs. Menge × Grundpreis** – MID 2014/32/EU Anh. VII (MI-005) Nr. 5.5.3 und OIML R 117-1:2019:
+  Differenz ≤ Preis von E_min, muss aber nicht kleiner als der kleinste Geldwert sein.
+  E_min = 2 · MMQ · A/100; Zapfsäulen Klasse 0,5 → bei MMQ 5 l („Vmin. 5 Liter“): 0,05 l ≈ 11 ct.
+  Die App prüft strenger (±1,1 ct). Rechnet eine Säule den Preis aus einer feineren internen Menge,
+  kann das „Nicht sicher“ ergeben [Vermutung, bisher nicht beobachtet; Aral-Foto passte exakt gerundet].
+- **Reihenfolge der Anzeigen**: in keiner gelesenen Vorschrift festgelegt (MID, OIML R 117, BEV E-24).
+  „Literpreis unten“ in `deute()` bleibt Annahme. BEV E-24: an jeder Anzeige die Bezeichnung (€, Liter/L/l, €/l).
+- **Ziffernhöhe** (OIML R 117-1 Nr. 5.1): Menge und Betrag ≥ 10 mm, Grundpreis nur ≥ 4 mm → Grundpreis oft kleiner.
+  Vor jeder Abgabe Segmenttest („8888“, leer, Nullen) – Foto erst nach dem Tanken sinnvoll.
+- **Teilungswert** Menge i. d. R. 0,01 l. Beim Einhängen der Pistole kann die Anzeige noch um 0,01 l
+  weiterspringen (LMG Bayern M-39) → Foto nach dem Einhängen. Kasse darf um einen Ziffernschritt abweichen,
+  SB-Automat nicht (MID Anh. VII Nr. 5.1).
+- **TMU** (freiwillig): Menge auf 15 °C umgewertet, Hinweis „V bei 15 °C“/„tB = 15 °C“ neben der Literanzeige
+  (Eichamt Sachsen INFO 168). Für den Leser nur zusätzliche Beschriftung.
+- **Tankvolumen**: Laut LMG Bayern M-39 passen je nach Modell bis zu 17 l zusätzlich in Ausgleichsräume
+  und Schläuche → der 66-l-Hinweis kann auch bei echten Tankungen kommen; bleibt deshalb weich.
+- **Display-Typen** (echte Commons-Fotos, nicht im Repo): dunkle Ziffern auf hell hinterleuchtetem LCD (Aral) –
+  unterstützt; dunkle Ziffern auf orange/amber LCD und helle Ziffern auf dunklem Grund – **nicht unterstützt**,
+  Leser findet dort nichts (sicherer Fehlschlag, „Nicht sicher“).
+
 ## Bewusste Entscheidungen (nicht zurückbauen)
 - **Kein `position: fixed`-Overlay** für Seiten oder Dialoge – ging in Lutz' Vorschau nicht auf. Seiten werden per `hidden` gewechselt.
   Einzige Ausnahme (Lutz' Wunsch, v4.7): das Foto-Ergebnis als `<dialog>` mit `showModal()`.
