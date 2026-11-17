@@ -13,7 +13,7 @@
 <link rel="manifest" href="./2-manifest.webmanifest">
 <title>Tankprotokoll</title>
 <script>
-const APP_VERSION = '4.4';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '4.5';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -110,6 +110,8 @@ svg{display:block;flex:none}
 .feld input.text{font-weight:400;font-size:17px;max-width:200px}
 .feld input::placeholder{color:#4c505c;font-weight:400}
 .feld i{font-style:normal;color:var(--muted);font-size:14px;width:20px;flex:none}
+.foto{flex:none;align-self:center;width:32px;height:32px;padding:0;border:0;border-radius:9px;background:var(--o-weich);color:var(--o1);display:grid;place-items:center}
+.foto svg{width:19px;height:19px}
 input[type=date]{background:transparent;border:0;outline:0;font-size:17px;font-weight:600;color:var(--text);
   text-align:right;padding:calc(9px * var(--sk)) 0;-webkit-appearance:none;appearance:none;flex:1}
 .schalter input{position:absolute;opacity:0;width:0;height:0}
@@ -260,7 +262,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.4</span></h1>
+    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.5</span></h1>
     <button type="button" class="fahrzeug" id="fahrzeug" aria-label="Fahrzeug wechseln"></button>
   </div>
   <button class="zahnrad" id="btn-einstellungen" aria-label="Einstellungen"><img data-bild="15-zahnrad.png" alt=""></button>
@@ -303,6 +305,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 </section>
 
 <form id="formular" autocomplete="off" novalidate>
+  <input type="file" accept="image/*" id="f-foto" hidden>
   <div class="karte">
     <label class="zeile">
       <span class="ikone"><img data-bild="10-kalender.png" alt=""></span>
@@ -310,7 +313,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
     </label>
     <label class="zeile">
       <span class="ikone"><img data-bild="9-zapfsaeule.png" alt=""></span>
-      <span class="bez">Getankt</span><span class="feld"><input type="text" inputmode="decimal" id="f-liter" placeholder="0,00"><i>l</i></span>
+      <span class="bez">Getankt</span><span class="feld"><input type="text" inputmode="decimal" id="f-liter" placeholder="0,00"><i>l</i><button type="button" class="foto" id="btn-foto" aria-label="Zapfsäule fotografieren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button></span>
     </label>
     <label class="zeile">
       <span class="ikone"><img data-bild="11-euro.png" alt=""></span>
@@ -765,6 +768,181 @@ let messTimer = null;
 window.addEventListener('resize', () => { clearTimeout(messTimer); messTimer = setTimeout(passeGroesseAn, 120); });
 if (window.visualViewport) window.visualViewport.addEventListener('resize', () => { clearTimeout(messTimer); messTimer = setTimeout(passeGroesseAn, 150); });
 window.addEventListener('orientationchange', () => setTimeout(passeGroesseAn, 250));
+
+// ---------- Zapfsäulen-Foto (offline, ohne KI: 7-Segment-Ziffern abtasten) ----------
+function leseZapfsaeule(img){
+  const W = img.width, H = img.height, d = img.data;
+  const lum = new Float32Array(W * H);
+  const weiss = new Uint8Array(W * H);
+  // Weißabgleich: je Kanal das 98-%-Quantil auf 245 ziehen (Kunstlicht, Dämmerung, Farbstich)
+  const q = [0, 1, 2].map(c => { const hist = new Uint32Array(256);
+    for (let p = c; p < d.length; p += 16) hist[d[p]]++;
+    let n = 0, ziel = (d.length / 16) * 0.98; for (let v = 0; v < 256; v++){ n += hist[v]; if (n >= ziel) return Math.max(v, 40); } return 255; });
+  const k = q.map(v => 245 / v);
+  for (let i = 0, p = 0; i < W * H; i++, p += 4){
+    const r = Math.min(255, d[p] * k[0]), g = Math.min(255, d[p + 1] * k[1]), b = Math.min(255, d[p + 2] * k[2]);
+    lum[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    // LCD-Hintergrund: hell, fast farblos, nicht gelblich (Gehäuse ist cremefarben)
+    weiss[i] = (mn > 160 && mx - mn < 28 && b >= r - 6) ? 1 : 0;
+  }
+  // 1) LCD-Flächen: Zusammenhangskomponenten der weißen Maske auf 1/4 Auflösung
+  const s = 4, w = Math.floor(W / s), h = Math.floor(H / s);
+  const m = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    let n = 0;
+    for (let yy = 0; yy < s; yy++) for (let xx = 0; xx < s; xx++) n += weiss[(y * s + yy) * W + x * s + xx];
+    m[y * w + x] = n >= s * s / 2 ? 1 : 0;
+  }
+  const flaechen = komponenten(m, w, h, 1).filter(k => k.n > w * h * 0.002)
+    .map(k => ({ x0: k.x0 * s, y0: k.y0 * s, x1: (k.x1 + 1) * s, y1: (k.y1 + 1) * s, n: k.n * s * s,
+                 fuell: k.n / ((k.x1 - k.x0 + 1) * (k.y1 - k.y0 + 1)) }))
+    .filter(f => f.fuell > 0.35 && (f.x1 - f.x0) > (f.y1 - f.y0) * 1.2)
+    .sort((a, b) => b.n - a.n);
+  const zeilen = [];
+  for (const f of flaechen.slice(0, 3)) zeilen.push(...leseFlaeche(f));
+  return { flaechen, zeilen };
+
+  function leseFlaeche(f0){
+    // Rand zugeben: Maske endet oft vor der Glaskante, Ziffern am Rand sonst abgeschnitten
+    const px = Math.round((f0.x1 - f0.x0) * 0.06), py = Math.round((f0.y1 - f0.y0) * 0.06);
+    const f = { x0: Math.max(0, f0.x0 - px), y0: Math.max(0, f0.y0 - py), x1: Math.min(W, f0.x1 + px), y1: Math.min(H, f0.y1 + py) };
+    const fw = f.x1 - f.x0, fh = f.y1 - f.y0;
+    // Schwelle: Mitte zwischen Hintergrund (Median) und dunkelstem Prozent
+    const werte = [];
+    for (let y = f.y0; y < f.y1; y += 2) for (let x = f.x0; x < f.x1; x += 2) werte.push(lum[y * W + x]);
+    werte.sort((a, b) => a - b);
+    const dunkel = werte[Math.floor(werte.length * 0.01)], hell = werte[Math.floor(werte.length * 0.5)];
+    const schw = (dunkel + hell) / 2;
+    const dm = new Uint8Array(fw * fh);
+    for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) dm[y * fw + x] = lum[(f.y0 + y) * W + f.x0 + x] < schw ? 1 : 0;
+    // Segmente einer Ziffer verbinden: senkrecht/waagrecht weiten (Lücken zwischen Segmenten schließen)
+    // senkrecht stark, waagrecht kaum weiten: Segmente einer Ziffer verbinden, Komma bleibt getrennt
+    const r = Math.max(2, Math.round(fh * 0.012)), rx = Math.max(1, Math.round(fh * 0.003));
+    const dil = weite(dm, fw, fh, rx, r);
+    let teile = komponenten(dil, fw, fh, 1).filter(k => (k.y1 - k.y0) > fh * 0.08);
+    // Rand-Artefakte (Rahmen der Fläche) weg
+    teile = teile.filter(k => k.x0 > 1 && k.y0 > 1 && k.x1 < fw - 2 && k.y1 < fh - 2);
+    if (!teile.length) return [];
+    // Zeilen nach Höhe gruppieren: gleiche Höhe ±25 % und überlappende y-Bereiche
+    teile.sort((a, b) => a.x0 - b.x0);
+    const gruppen = [];
+    for (const k of teile){
+      const kh = k.y1 - k.y0, ym = (k.y0 + k.y1) / 2;
+      let g = gruppen.find(g => Math.abs(g.h - kh) < g.h * 0.25 && Math.abs(g.ym - ym) < g.h * 0.6);
+      if (!g){ g = { h: kh, ym, k: [] }; gruppen.push(g); }
+      g.k.push(k); g.ym = (g.ym * (g.k.length - 1) + ym) / g.k.length;
+    }
+    return gruppen.filter(g => g.k.length >= 3).sort((a, b) => a.ym - b.ym).map(g => {
+      const boxen = g.k.map(k => ({ x0: k.x0 + rx, y0: k.y0 + r, x1: k.x1 - rx, y1: k.y1 - r }));
+      const hoehe = Math.max(...boxen.map(b => b.y1 - b.y0));
+      const ziffern = boxen.map(b => ziffer(dm, fw, b, hoehe)).join('');
+      return { ziffern, boxen: boxen.map(b => ({ x0: b.x0 + f.x0, y0: b.y0 + f.y0, x1: b.x1 + f.x0, y1: b.y1 + f.y0 })) };
+    });
+  }
+}
+
+// Eine Ziffer aus 7 Segmenten: in Streifen quer zum Segment nach dunklen Pixeln suchen.
+function ziffer(dm, fw, b, hoehe){
+  const bw = b.x1 - b.x0 + 1, bh = b.y1 - b.y0 + 1;
+  if (bw < bh * 0.35) return '1';                          // schmal = "1" (nur rechte Segmente)
+  const an = (fx0, fx1, fy0, fy1) => {
+    let n = 0, t = 0;
+    for (let y = Math.round(b.y0 + fy0 * bh); y <= b.y0 + fy1 * bh; y++)
+      for (let x = Math.round(b.x0 + fx0 * bw); x <= b.x0 + fx1 * bw; x++){ t++; n += dm[y * fw + x]; }
+    return t ? n / t > 0.12 : false;
+  };
+  const seg = {
+    a: an(0.30, 0.80, 0.00, 0.12), d: an(0.20, 0.70, 0.88, 1.00), g: an(0.30, 0.70, 0.44, 0.56),
+    f: an(0.00, 0.35, 0.18, 0.38), b: an(0.65, 1.00, 0.18, 0.38),
+    e: an(0.00, 0.35, 0.62, 0.82), c: an(0.65, 1.00, 0.62, 0.82)
+  };
+  const code = 'abcdefg'.split('').map(k => seg[k] ? 1 : 0).join('');
+  const tab = { '1111110': '0', '0110000': '1', '1101101': '2', '1111001': '3', '0110011': '4', '1011011': '5',
+                '1011111': '6', '1110000': '7', '1110010': '7', '1111111': '8', '1111011': '9', '0011111': '6', '1110011': '9' };
+  return tab[code] || '?';
+}
+
+function weite(m, w, h, rx, ry){
+  const t = new Uint8Array(w * h), o = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++){ let last = -1e9;
+    for (let x = 0; x < w; x++){ if (m[y * w + x]) last = x; if (x - last <= rx) t[y * w + x] = 1; }
+    last = 1e9; for (let x = w - 1; x >= 0; x--){ if (m[y * w + x]) last = x; if (last - x <= rx) t[y * w + x] = 1; } }
+  for (let x = 0; x < w; x++){ let last = -1e9;
+    for (let y = 0; y < h; y++){ if (t[y * w + x]) last = y; if (y - last <= ry) o[y * w + x] = 1; }
+    last = 1e9; for (let y = h - 1; y >= 0; y--){ if (t[y * w + x]) last = y; if (last - y <= ry) o[y * w + x] = 1; } }
+  return o;
+}
+
+function komponenten(m, w, h, wert){
+  const lab = new Int32Array(w * h), aus = [], st = [];
+  for (let i = 0; i < w * h; i++){
+    if (m[i] !== wert || lab[i]) continue;
+    const k = { n: 0, x0: 1e9, y0: 1e9, x1: -1, y1: -1 }; lab[i] = aus.length + 1; st.push(i);
+    while (st.length){
+      const j = st.pop(), x = j % w, y = (j - x) / w; k.n++;
+      if (x < k.x0) k.x0 = x; if (x > k.x1) k.x1 = x; if (y < k.y0) k.y0 = y; if (y > k.y1) k.y1 = y;
+      if (x > 0 && m[j - 1] === wert && !lab[j - 1]){ lab[j - 1] = lab[i]; st.push(j - 1); }
+      if (x < w - 1 && m[j + 1] === wert && !lab[j + 1]){ lab[j + 1] = lab[i]; st.push(j + 1); }
+      if (y > 0 && m[j - w] === wert && !lab[j - w]){ lab[j - w] = lab[i]; st.push(j - w); }
+      if (y < h - 1 && m[j + w] === wert && !lab[j + w]){ lab[j + w] = lab[i]; st.push(j + w); }
+    }
+    aus.push(k);
+  }
+  return aus;
+}
+
+// Ganzer Ablauf: mehrere Drehwinkel probieren, nur ein in sich stimmiges Ergebnis zählt.
+function erkenneZapfsaeule(bild){
+  const winkel = [0, -3, 3, -6, 6, -9, 9];
+  let bestes = null;
+  for (const a of winkel){
+    const c = document.createElement('canvas'); c.width = bild.width; c.height = bild.height;
+    const x = c.getContext('2d');
+    x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height);
+    x.translate(c.width / 2, c.height / 2); x.rotate(a * Math.PI / 180); x.drawImage(bild, -c.width / 2, -c.height / 2);
+    const r = leseZapfsaeule(x.getImageData(0, 0, c.width, c.height));
+    const w = deute(r.zeilen.map(z => z.ziffern));
+    if (w && w.stimmt) return Object.assign(w, { winkel: a });
+    if (w && !bestes) bestes = Object.assign(w, { winkel: a });
+  }
+  return bestes;                              // nicht stimmig: Werte nur als Vorschlag
+}
+// Zeilen deuten: zwei Zeilen mit 2 Nachkommastellen (Betrag, Liter), eine mit 1 (Preis in ct)
+function deute(z){
+  const ok = z.filter(s => /^\d{3,7}$/.test(s));
+  if (ok.length < 3) return null;
+  const betrag = +ok[0] / 100, liter = +ok[1] / 100, preis = +ok[2] / 1000;   // 2139 ct·10 → 2,139 €/l
+  const stimmt = liter > 0 && preis > 0.5 && preis < 4 && Math.abs(betrag - liter * preis) <= 0.011;
+  return { betrag, liter, preis, stimmt };
+}
+
+// Foto der Zapfsäule: Liter und Betrag nur übernehmen, wenn Betrag = Liter × Preis aufgeht
+const fFoto = $('f-foto');
+$('btn-foto').addEventListener('click', () => {
+  const a = document.activeElement; if (a && a.blur) a.blur();
+  fFoto.value = ''; fFoto.click();
+});
+fFoto.addEventListener('change', async () => {
+  const datei = fFoto.files && fFoto.files[0]; if (!datei) return;
+  showInfo('Lese Foto …', 0);
+  const url = URL.createObjectURL(datei);
+  try {
+    const im = new Image(); im.src = url; await im.decode();
+    const f = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight));   // größer bringt nichts, kostet nur Zeit
+    const c = document.createElement('canvas');
+    c.width = Math.round(im.naturalWidth * f); c.height = Math.round(im.naturalHeight * f);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    await new Promise(r => setTimeout(r, 30));                                   // Banner erst zeichnen lassen
+    const e = erkenneZapfsaeule(c);
+    if (e && e.stimmt){
+      fLiter.value = fmt(e.liter, 2); fPreis.value = fmt(e.betrag, 2);
+      speichereEntwurf(); render();
+      showInfo('Erkannt: ' + fmt(e.liter, 2) + ' l · ' + fmt(e.betrag, 2) + ' € (' + fmt(e.preis, 3) + ' €/l) – bitte prüfen', 5);
+    } else showInfo('Nicht sicher erkannt – bitte von Hand eintragen', 4);
+  } catch (_){ showInfo('Foto ließ sich nicht lesen', 3); }
+  finally { URL.revokeObjectURL(url); }
+});
 
 // ---------- Speichern / Bearbeiten / Löschen ----------
 function fehler(text, feld){ showInfo(text, 3, feld); feld.focus(); }

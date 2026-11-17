@@ -51,6 +51,10 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
   Scrollsperre `html.fest` nur wenn nachweislich passend. Tastatur offen → keine Neuberechnung (`visualViewport`).
 - iOS: Knöpfe bekommen beim Antippen keinen Fokus → vor Messungen Feld per `blur()` lösen.
 - 30-Tage-Linie im Monatsdiagramm wurde wieder entfernt (redundant zu den Säulen).
+- Zapfsäulen-Foto (seit v4.5, Kamera-Knopf in „Getankt“): **offline, ohne KI und ohne Bibliothek** –
+  LCD-Flächen per Weißabgleich + Farbmaske, Ziffern als 7 Segmente abgetastet (`erkenneZapfsaeule()`).
+  Übernommen wird nur, wenn Betrag = Liter × Preis (±1 ct) aufgeht; sonst nichts eintragen, Hinweis zeigen.
+  Probiert Drehwinkel 0, ±3, ±6, ±9°. Bild vorher auf 1600 px lange Seite verkleinern. Speichern bleibt beim Nutzer.
 - Mehrere Fahrzeuge ja, Sync zwischen Geräten nein: Austausch über Export/Import „Zusammenführen“,
   Zuordnung über den Fahrzeugnamen (Groß/Klein egal). CNG/Strom bewusst nicht als Kraftstoff (kg/kWh).
 
@@ -66,4 +70,6 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
 - Plausibilitätsprüfung gegen Zahlendreher: Liter ab 66 l gibt es seit v4.4 (`LITER_HINWEIS`, Hinweis-Banner,
   zweites Speichern mit gleichem Wert übernimmt). Kilometerstand und Preis fehlen noch.
   Grenze gilt für alle Fahrzeuge gleich – bei einem zweiten Fahrzeug ggf. Tankvolumen je Fahrzeug.
+- Zapfsäulen-Leser bisher nur an einem echten Foto (Aral, LCD) entwickelt + künstliche Varianten.
+  Andere Marken/LED-Anzeigen ungetestet – neue Fotos als Testfälle sammeln. Kilometerstand per Foto fehlt.
 - iOS kürzt den Home-Bildschirm-Namen evtl. („Tankprotoko…“) – am Gerät prüfen.
