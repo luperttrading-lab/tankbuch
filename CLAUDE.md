@@ -45,6 +45,7 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
 
 ## Bewusste Entscheidungen (nicht zurückbauen)
 - **Kein `position: fixed`-Overlay** für Seiten oder Dialoge – ging in Lutz' Vorschau nicht auf. Seiten werden per `hidden` gewechselt.
+  Einzige Ausnahme (Lutz' Wunsch, v4.7): das Foto-Ergebnis als `<dialog>` mit `showModal()`.
 - **Keine `confirm()`/`alert()`** – Rückfragen sind Karten im eigenen Stil (rote Karte „Wirklich löschen?“).
 - Bearbeiten/Löschen nur im aufklappbaren Zeilen-Editor der Historie-Tabelle, nicht auf der Startseite.
 - Startseite passt ohne Scrollen: Platzfaktor `--sk` (linear, in zwei Messungen exakt gelöst, `passeGroesseAn()`),
@@ -53,7 +54,7 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
 - 30-Tage-Linie im Monatsdiagramm wurde wieder entfernt (redundant zu den Säulen).
 - Zapfsäulen-Foto (seit v4.5; Kamera-Knopf seit v4.6 in der Kopfzeile neben ⚙): **offline, ohne KI und ohne Bibliothek** –
   LCD-Flächen per Weißabgleich + Farbmaske, Ziffern als 7 Segmente abgetastet (`erkenneZapfsaeule()`).
-  Ergebnis erscheint als Karte (`#foto-karte`) **an Stelle der Verbrauchskarte** – bewusst kein fixed-Popup.
+  Ergebnis als Popup (`<dialog id="foto-karte">`): drei Werte nebeneinander, Prüfzeile, Verwerfen/Übernehmen.
   „Übernehmen“ nur, wenn Betrag = Liter × Preis (±1 ct) aufgeht; sonst nur „Schließen“, nichts eintragen.
   Probiert Drehwinkel 0, ±3, ±6, ±9°. Bild vorher auf 1600 px lange Seite verkleinern. Speichern bleibt beim Nutzer.
 - Mehrere Fahrzeuge ja, Sync zwischen Geräten nein: Austausch über Export/Import „Zusammenführen“,

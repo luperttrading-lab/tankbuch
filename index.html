@@ -13,7 +13,7 @@
 <link rel="manifest" href="./2-manifest.webmanifest">
 <title>Tankprotokoll</title>
 <script>
-const APP_VERSION = '4.6';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '4.7';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -57,15 +57,22 @@ svg{display:block;flex:none}
 .zahnrad img{display:block;width:22px;height:22px}
 .kopf-knoepfe{display:flex;gap:10px;flex:none}
 .kamera{color:var(--o1)} .kamera svg{width:21px;height:21px}
-.foto-karte{border-radius:var(--r);background:var(--karte) var(--b-graphit) center/cover no-repeat;border:1px solid rgba(255,138,26,.45);padding:calc(12px * var(--sk)) 16px}
-.foto-karte h2{font-size:18px;font-weight:700;margin-bottom:calc(6px * var(--sk))}
-.fk-werte{display:grid;grid-template-columns:1fr auto;gap:calc(4px * var(--sk)) 12px;font-size:16px}
-.fk-werte span{color:var(--muted)} .fk-werte b{text-align:right;font-variant-numeric:tabular-nums}
-.fk-pruef{font-size:14px;line-height:1.35;margin:calc(8px * var(--sk)) 0 calc(10px * var(--sk));color:#7fd38b}
+/* Foto-Ergebnis: einziges echtes Popup der App (<dialog>, Lutz' Wunsch seit v4.7) */
+.foto-dialog{width:min(calc(100vw - 32px),380px);max-width:none;margin:auto;padding:16px;border-radius:var(--r);color:var(--text);
+  background:var(--karte) var(--b-graphit) center/cover no-repeat;border:1px solid rgba(255,138,26,.45);box-shadow:0 18px 50px rgba(0,0,0,.55)}
+.foto-dialog::backdrop{background:rgba(6,7,11,.62);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.foto-dialog h2{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:700}
+.foto-dialog h2 svg{width:20px;height:20px;color:var(--o1);flex:none}
+.fk-werte{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0 8px;text-align:center}
+.fk-werte div{background:rgba(255,255,255,.05);border-radius:12px;padding:10px 2px 8px;min-width:0}
+.fk-werte b{display:block;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fk-werte small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.fk-pruef{font-size:13px;line-height:1.35;text-align:center;margin-bottom:12px;color:#7fd38b}
 .fk-pruef.schlecht{color:var(--warn)}
-.foto-karte .ed-rechts{justify-content:flex-end}
-.foto-karte button{font-size:15px;font-weight:600;padding:9px 16px;border-radius:11px;color:var(--text);background:rgba(255,255,255,.06)}
-.foto-karte .fk-ja{background:linear-gradient(135deg,var(--o1),var(--o2));color:var(--o-ink)}
+.fk-knoepfe{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fk-knoepfe button{font-size:16px;font-weight:600;padding:11px 8px;border-radius:12px;color:var(--text);background:rgba(255,255,255,.07)}
+.fk-knoepfe button:only-child,.fk-knoepfe button[hidden] + button{grid-column:1 / -1}
+.fk-knoepfe .fk-ja{background:linear-gradient(135deg,var(--o1),var(--o2));color:var(--o-ink)}
 
 /* Kachel Verbrauch */
 .held{position:relative;overflow:hidden;border-radius:var(--r);
@@ -271,7 +278,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.6</span></h1>
+    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.7</span></h1>
     <button type="button" class="fahrzeug" id="fahrzeug" aria-label="Fahrzeug wechseln"></button>
   </div>
   <div class="kopf-knoepfe">
@@ -316,16 +323,16 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
   <div class="hinweis" id="a-hinweis"></div>
 </section>
 
-<section class="foto-karte" id="foto-karte" hidden aria-live="polite">
-  <h2 id="fk-titel">Zapfsäule erkannt</h2>
+<dialog class="foto-dialog" id="foto-karte" aria-labelledby="fk-titel">
+  <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span id="fk-titel">Zapfsäule erkannt</span></h2>
   <div class="fk-werte">
-    <span>Getankt</span><b id="fk-liter">–</b>
-    <span>Bezahlt</span><b id="fk-betrag">–</b>
-    <span>Literpreis</span><b id="fk-preis">–</b>
+    <div><b id="fk-liter">–</b><small>Liter</small></div>
+    <div><b id="fk-betrag">–</b><small>Euro</small></div>
+    <div><b id="fk-preis">–</b><small>€ je Liter</small></div>
   </div>
   <p class="fk-pruef" id="fk-pruef"></p>
-  <div class="ed-rechts"><button type="button" id="fk-verwerfen">Verwerfen</button><button type="button" class="fk-ja" id="fk-uebernehmen">Übernehmen</button></div>
-</section>
+  <div class="fk-knoepfe"><button type="button" id="fk-verwerfen">Verwerfen</button><button type="button" class="fk-ja" id="fk-uebernehmen">Übernehmen</button></div>
+</dialog>
 
 <form id="formular" autocomplete="off" novalidate>
   <input type="file" accept="image/*" id="f-foto" hidden>
@@ -684,12 +691,11 @@ function aktualisiereKopf(){
   $('btn-speichern').textContent = !bearbeite ? 'Eintrag speichern' : (unveraendert() ? 'Gespeichert' : 'Änderung speichern');
   $('btn-abbrechen').hidden = !bearbeite;
 }
-let neuesFz = false, fzWahlOffen = false, fotoErgebnis = null;   // fotoErgebnis: Karte statt Verbrauchsanzeige
+let neuesFz = false, fzWahlOffen = false, fotoErgebnis = null;   // fotoErgebnis: Inhalt des Foto-Popups
 function render(){
   const karte = !einst.eingerichtet || neuesFz;
   $('einrichtung').hidden = !karte;
-  document.querySelector('.held').hidden = karte || !!fotoErgebnis;
-  $('foto-karte').hidden = karte || !fotoErgebnis;
+  document.querySelector('.held').hidden = karte;
   $('formular').hidden = karte;
   $('fz-wahl').hidden = karte || !fzWahlOffen;
   $('w-titel').textContent = neuesFz ? 'Neues Fahrzeug' : 'Willkommen';
@@ -967,20 +973,26 @@ function zeigeFotoErgebnis(e){
   fotoErgebnis = e;
   const da = e.liter > 0;
   $('fk-titel').textContent = e.stimmt ? 'Zapfsäule erkannt' : 'Nicht sicher erkannt';
-  $('fk-liter').textContent = da ? fmt(e.liter, 2) + ' l' : '–';
-  $('fk-betrag').textContent = da ? fmt(e.betrag, 2) + ' €' : '–';
-  $('fk-preis').textContent = da ? fmt(e.preis, 3) + ' €/l' : '–';
+  $('fk-liter').textContent = da ? fmt(e.liter, 2) : '–';
+  $('fk-betrag').textContent = da ? fmt(e.betrag, 2) : '–';
+  $('fk-preis').textContent = da ? fmt(e.preis, 3) : '–';
   const p = $('fk-pruef');
   p.classList.toggle('schlecht', !e.stimmt);
   p.textContent = e.stimmt ? '✓ ' + fmt(e.liter, 2) + ' l × ' + fmt(e.preis, 3) + ' €/l = ' + fmt(e.betrag, 2) + ' €'
     : (da ? 'Liter × Preis ergibt nicht den Betrag – bitte von Hand eintragen.' : 'Keine Zapfsäulen-Anzeige gefunden – bitte von Hand eintragen.');
   $('fk-uebernehmen').hidden = !e.stimmt;
   $('fk-verwerfen').textContent = e.stimmt ? 'Verwerfen' : 'Schließen';
-  render();
+  const dlg = $('foto-karte'); if (!dlg.open) dlg.showModal();
 }
-$('fk-verwerfen').addEventListener('click', () => { fotoErgebnis = null; render(); });
+const fotoZu = () => { fotoErgebnis = null; if ($('foto-karte').open) $('foto-karte').close(); };
+$('fk-verwerfen').addEventListener('click', fotoZu);
+$('foto-karte').addEventListener('cancel', ev => { ev.preventDefault(); fotoZu(); });          // Wischen/Esc = Verwerfen
+$('foto-karte').addEventListener('click', ev => {                                              // Tipp neben das Fenster
+  const r = $('foto-karte').getBoundingClientRect();
+  if (ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom) fotoZu();
+});
 $('fk-uebernehmen').addEventListener('click', () => {
-  const e = fotoErgebnis; fotoErgebnis = null;
+  const e = fotoErgebnis; fotoZu();
   fLiter.value = fmt(e.liter, 2); fPreis.value = fmt(e.betrag, 2);
   speichereEntwurf(); render();
   showInfo('Übernommen – Kilometer eintragen, dann speichern', 3);
