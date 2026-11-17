@@ -13,7 +13,7 @@
 <link rel="manifest" href="./2-manifest.webmanifest">
 <title>Tankprotokoll</title>
 <script>
-const APP_VERSION = '4.7';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '4.8';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -278,7 +278,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.7</span></h1>
+    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.8</span></h1>
     <button type="button" class="fahrzeug" id="fahrzeug" aria-label="Fahrzeug wechseln"></button>
   </div>
   <div class="kopf-knoepfe">
@@ -940,11 +940,33 @@ function erkenneZapfsaeule(bild){
 }
 // Zeilen deuten: zwei Zeilen mit 2 Nachkommastellen (Betrag, Liter), eine mit 1 (Preis in ct)
 function deute(z){
-  const ok = z.filter(s => /^\d{3,7}$/.test(s));
-  if (ok.length < 3) return null;
-  const betrag = +ok[0] / 100, liter = +ok[1] / 100, preis = +ok[2] / 1000;   // 2139 ct·10 → 2,139 €/l
-  const stimmt = liter > 0 && preis > 0.5 && preis < 4 && Math.abs(betrag - liter * preis) <= 0.011;
-  return { betrag, liter, preis, stimmt };
+  // je Zeile die längste Ziffernfolge: Beschriftungen („Liter:“) und Einheiten (€, /L) fallen als „?“ weg
+  const n = z.map(s => (s.match(/\d{3,7}/g) || []).sort((a, b) => b.length - a.length)[0]).filter(Boolean);
+  if (n.length < 3) return null;
+  const wert = (i, j, k) => {
+    const betrag = +n[i] / 100, liter = +n[j] / 100, preis = +n[k] / 1000;   // 2139 bzw. 1949 → 2,139 / 1,949 €/l
+    const stimmt = liter > 0 && preis > 0.5 && preis < 4 && Math.abs(betrag - liter * preis) <= 0.011;
+    return { betrag, liter, preis, stimmt };
+  };
+  // Reihenfolge je Säule verschieden – Kreuzprüfung filtert, Plausibilität entscheidet.
+  // Achtung: Liter und Preis vertauscht ergibt dasselbe Produkt (3473/100 · 2139/1000 = 2139/100 · 3473/1000).
+  const kandidaten = [];
+  for (let i = 0; i < n.length; i++) for (let j = 0; j < n.length; j++) for (let k = 0; k < n.length; k++){
+    if (i === j || j === k || i === k) continue;
+    const w = wert(i, j, k); if (!w.stimmt) continue;
+    const kurz = Math.min(...[i, j, k].map(x => n[x].length));
+    w.punkte = (n[k].length === kurz ? 2 : 0)                                  // Preis: kürzeste Zahl (keine führenden Nullen)
+             + (n[i].length === n[j].length ? 1 : 0)                          // Betrag und Liter gleich breit
+             + (w.preis >= 1 && w.preis <= 3 ? 1 : 0)                          // übliche Spritpreise
+             + (k === n.length - 1 ? 0.5 : 0)                                    // Literpreis steht unten
+             + (i === 0 && j === 1 && k === 2 ? 0.25 : 0);                    // Aral-Reihenfolge bevorzugt
+    kandidaten.push(w);
+  }
+  if (!kandidaten.length) return wert(0, 1, 2);
+  kandidaten.sort((a, b) => b.punkte - a.punkte);
+  const [a, b] = kandidaten;
+  if (b && b.punkte === a.punkte && (b.liter !== a.liter || b.preis !== a.preis)) return Object.assign(a, { stimmt: false });   // nicht eindeutig
+  return a;
 }
 
 // Foto der Zapfsäule: Liter und Betrag nur übernehmen, wenn Betrag = Liter × Preis aufgeht

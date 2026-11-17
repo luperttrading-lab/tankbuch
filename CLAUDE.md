@@ -57,6 +57,9 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
   Ergebnis als Popup (`<dialog id="foto-karte">`): drei Werte nebeneinander, Prüfzeile, Verwerfen/Übernehmen.
   „Übernehmen“ nur, wenn Betrag = Liter × Preis (±1 ct) aufgeht; sonst nur „Schließen“, nichts eintragen.
   Probiert Drehwinkel 0, ±3, ±6, ±9°. Bild vorher auf 1600 px lange Seite verkleinern. Speichern bleibt beim Nutzer.
+  Zeilenreihenfolge egal (seit v4.8, `deute()`): alle Zuordnungen probieren, je Zeile längste Ziffernfolge.
+  Falle: Liter und Preis vertauscht ergibt **dasselbe Produkt** – Entscheidung per Punkte (Preis = kürzeste Zahl,
+  Betrag/Liter gleich breit, Preis 1–3 €/l, Preis unten). Gleichstand → „Nicht sicher“. Fälle in Lutz' Testskript.
 - Mehrere Fahrzeuge ja, Sync zwischen Geräten nein: Austausch über Export/Import „Zusammenführen“,
   Zuordnung über den Fahrzeugnamen (Groß/Klein egal). CNG/Strom bewusst nicht als Kraftstoff (kg/kWh).
 
