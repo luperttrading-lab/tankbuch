@@ -21,7 +21,8 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
 
 ## Datenmodell (localStorage)
 - Schlüssel heißen weiterhin `tankbuch.*` (alter App-Name). **Nie umbenennen** – sonst sind die Daten weg.
-  `tankbuch.eintraege`, `tankbuch.einstellungen`, `tankbuch.entwurf`, `tankbuch.gesehen`.
+  `tankbuch.eintraege`, `tankbuch.einstellungen`, `tankbuch.entwurf`, `tankbuch.gesehen`,
+  `tankbuch.apikey` (Anthropic-Schlüssel für die Foto-Rückfallebene – bewusst **nicht** in `einst`, damit er nie im Export landet).
 - Eintrag: `{id, datum:'YYYY-MM-DD', liter, preis, km, stand, voll, ts, fz}`; `fz` = Fahrzeug-ID.
 - Einstellungen: `fahrzeuge:[{id,name,spitzname,kraftstoff}]`, `aktiv`, `einheit` (1/10/100),
   `kmModus` ('trip'|'stand'), `zeitraum`, `monatsModus` ('verursacht'|'gezahlt'), `eingerichtet`, `migration`.
@@ -61,8 +62,7 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
 - **Tankvolumen**: Laut LMG Bayern M-39 passen je nach Modell bis zu 17 l zusätzlich in Ausgleichsräume
   und Schläuche → der 66-l-Hinweis kann auch bei echten Tankungen kommen; bleibt deshalb weich.
 - **Display-Typen** (echte Commons-Fotos, nicht im Repo): dunkle Ziffern auf hell hinterleuchtetem LCD (Aral) –
-  unterstützt; dunkle Ziffern auf orange/amber LCD und helle Ziffern auf dunklem Grund – **nicht unterstützt**,
-  Leser findet dort nichts (sicherer Fehlschlag, „Nicht sicher“).
+  gut; andere Farben und helle Ziffern auf dunklem Grund liest der Leser seit v4.9 nur teilweise (s. „Offen“).
 
 ## Bewusste Entscheidungen (nicht zurückbauen)
 - **Kein `position: fixed`-Overlay** für Seiten oder Dialoge – ging in Lutz' Vorschau nicht auf. Seiten werden per `hidden` gewechselt.
@@ -73,14 +73,19 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
   Scrollsperre `html.fest` nur wenn nachweislich passend. Tastatur offen → keine Neuberechnung (`visualViewport`).
 - iOS: Knöpfe bekommen beim Antippen keinen Fokus → vor Messungen Feld per `blur()` lösen.
 - 30-Tage-Linie im Monatsdiagramm wurde wieder entfernt (redundant zu den Säulen).
-- Zapfsäulen-Foto (seit v4.5; Kamera-Knopf seit v4.6 in der Kopfzeile neben ⚙): **offline, ohne KI und ohne Bibliothek** –
-  LCD-Flächen per Weißabgleich + Farbmaske, Ziffern als 7 Segmente abgetastet (`erkenneZapfsaeule()`).
-  Ergebnis als Popup (`<dialog id="foto-karte">`): drei Werte nebeneinander, Prüfzeile, Verwerfen/Übernehmen.
-  „Übernehmen“ nur, wenn Betrag = Liter × Preis (±1 ct) aufgeht; sonst nur „Schließen“, nichts eintragen.
-  Probiert Drehwinkel 0, ±3, ±6, ±9°. Bild vorher auf 1600 px lange Seite verkleinern. Speichern bleibt beim Nutzer.
-  Zeilenreihenfolge egal (seit v4.8, `deute()`): alle Zuordnungen probieren, je Zeile längste Ziffernfolge.
-  Falle: Liter und Preis vertauscht ergibt **dasselbe Produkt** – Entscheidung per Punkte (Preis = kürzeste Zahl,
-  Betrag/Liter gleich breit, Preis 1–3 €/l, Preis unten). Gleichstand → „Nicht sicher“. Fälle: `node tests/deute.test.js`.
+- Zapfsäulen-Foto (Kamera-Knopf in der Kopfzeile neben ⚙): **zuerst offline, ohne KI und ohne Bibliothek** (Leser seit v4.9):
+  Graustufe → lokale Schwelle (Integralbild) → Rahmenlinien weg → Segmente zu Ziffern (nur ähnlich große Teile) →
+  Zeilen → 7-Segment-Abtastung mit Kursiv-Schräge. Varianten: dunkle/helle Ziffern × 3 Fenster × 2 Schwellen,
+  Drehung 0/±5°; die Zeilen **aller** Varianten werden gesammelt und gemeinsam gedeutet (`deuteZeilen()`).
+  Deutung nach der Lage auf echten Säulen: Betrag über Liter, beide rechtsbündig, Literpreis darunter; nur ganz
+  gelesene Zeilen; Betrag = Liter × Preis (±1,1 ct). Falle: Liter/Preis vertauscht ergibt dasselbe Produkt –
+  die Lage entscheidet. Tests: `node tests/deute.test.js`.
+- **Rückfallebene Bildmodell** (v4.9): nur wenn offline unsicher **und** ein API-Schlüssel gesetzt ist. SDK
+  `@anthropic-ai/sdk@1.3.0` per `import()` von jsDelivr, `dangerouslyAllowBrowser` (Schlüssel liegt nur auf Lutz' Gerät),
+  `claude-opus-5-5`, `effort: 'low'`, JSON-Schema-Ausgabe, `fallbacks: 'default'` (Beta `server-side-fallback-2026-07-01`).
+  Bild auf 1200 px, ≈ 1 ct je Foto. Antwort durchläuft dieselbe Kreuzprüfung; Fehler (Schlüssel, Netz) im Popup.
+- Ergebnis als Popup (`<dialog id="foto-karte">`): drei Werte nebeneinander, Prüfzeile, Herkunft („offline erkannt“ /
+  „vom Claude-Bildmodell gelesen“), Verwerfen/Übernehmen. „Übernehmen“ nur bei bestandener Kreuzprüfung.
 - Mehrere Fahrzeuge ja, Sync zwischen Geräten nein: Austausch über Export/Import „Zusammenführen“,
   Zuordnung über den Fahrzeugnamen (Groß/Klein egal). CNG/Strom bewusst nicht als Kraftstoff (kg/kWh).
 
@@ -96,11 +101,13 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
 - Plausibilitätsprüfung gegen Zahlendreher: Liter ab 66 l gibt es seit v4.4 (`LITER_HINWEIS`, Hinweis-Banner,
   zweites Speichern mit gleichem Wert übernimmt). Kilometerstand und Preis fehlen noch.
   Grenze gilt für alle Fahrzeuge gleich – bei einem zweiten Fahrzeug ggf. Tankvolumen je Fahrzeug.
-- Zapfsäulen-Leser an einem echten Foto (Aral) entwickelt. **Test 17.11.2026 an 17 echten Anzeigen** (Ausschnitte
-  aus Bildersuche-Screenshots, nicht im Repo wegen Urheberrecht): **0 erkannt, 0 falsch**, alle „Nicht sicher“.
-  Ursachen: Farbmaske nur für weiß-bläuliches LCD (gelbgrün, grau, blau, Amber auf Schwarz fallen raus),
-  Zeilen-/Ziffernbildung zu starr. Für echte Brauchbarkeit Neubau nötig (farbunabhängig, beide Polaritäten).
-  Befund aus allen echten Fotos: Betrag oben, Liter Mitte, Literpreis unten und kleiner; Preis meist in ct mit
-  1 Nachkommastelle (Aral, Gilbarco, Tokheim alt), sonst € mit 3 Stellen. 1 ct Abweichung kommt real vor
-  (10,00 l × 1,469 = 14,69, Anzeige 14,70). Kilometerstand per Foto fehlt.
+- Offline-Leser: Test an 17 echten Anzeigen (Ausschnitte aus Bildersuche-Screenshots, nicht im Repo wegen
+  Urheberrecht, aufgeteilt in Entwicklung/Gegentest) + Lutz' Aral-Foto: v4.8 **0/17**, v4.9 **5/18 richtig, 0 falsch**
+  (Entwicklung 4/9, Gegentest 1/9; viele Gegentest-Fälle sind winzige Vorschaubilder). Künstliche Varianten von
+  Lutz' Foto: 8/11. Schwach: gelbgrüne/graue/blaue LCDs, Amber auf Schwarz, kleine Preisanzeigen.
+  Echte Fotos von Lutz sind die besten neuen Testfälle. Befund aus allen echten Fotos: Betrag oben, Liter Mitte,
+  Literpreis unten und kleiner; Preis meist in ct mit 1 Nachkommastelle, sonst € mit 3 Stellen;
+  1 ct Abweichung kommt real vor (10,00 l × 1,469 = 14,69, Anzeige 14,70). Kilometerstand per Foto fehlt.
+- Rückfallebene nur mit nachgebautem SDK getestet (keine echte API-Anfrage aus der Testumgebung) – erster echter
+  Lauf auf Lutz' iPhone mit eigenem Schlüssel steht aus.
 - iOS kürzt den Home-Bildschirm-Namen evtl. („Tankprotoko…“) – am Gerät prüfen.
