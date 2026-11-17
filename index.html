@@ -13,7 +13,7 @@
 <link rel="manifest" href="./2-manifest.webmanifest">
 <title>Tankprotokoll</title>
 <script>
-const APP_VERSION = '4.8';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '4.9';          // bei JEDER Änderung hochzählen
 </script>
 <style>
 :root{
@@ -69,6 +69,8 @@ svg{display:block;flex:none}
 .fk-werte small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
 .fk-pruef{font-size:13px;line-height:1.35;text-align:center;margin-bottom:12px;color:#7fd38b}
 .fk-pruef.schlecht{color:var(--warn)}
+.fk-quelle{font-size:12px;color:var(--muted);text-align:center;margin:-6px 0 12px}
+.fk-quelle:empty{display:none}
 .fk-knoepfe{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .fk-knoepfe button{font-size:16px;font-weight:600;padding:11px 8px;border-radius:12px;color:var(--text);background:rgba(255,255,255,.07)}
 .fk-knoepfe button:only-child,.fk-knoepfe button[hidden] + button{grid-column:1 / -1}
@@ -278,7 +280,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
 <main id="seite-start">
 <header class="kopf">
   <div>
-    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.8</span></h1>
+    <h1>Tankprotokoll<span class="version" id="version" role="button" tabindex="0">v4.9</span></h1>
     <button type="button" class="fahrzeug" id="fahrzeug" aria-label="Fahrzeug wechseln"></button>
   </div>
   <div class="kopf-knoepfe">
@@ -331,6 +333,7 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
     <div><b id="fk-preis">–</b><small>€ je Liter</small></div>
   </div>
   <p class="fk-pruef" id="fk-pruef"></p>
+  <p class="fk-quelle" id="fk-quelle"></p>
   <div class="fk-knoepfe"><button type="button" id="fk-verwerfen">Verwerfen</button><button type="button" class="fk-ja" id="fk-uebernehmen">Übernehmen</button></div>
 </dialog>
 
@@ -431,6 +434,11 @@ h3 .klein{font-weight:400;color:var(--muted);font-size:13px;text-align:right}
         <div class="ed-rechts"><button type="button" id="frage-fz-nein">Behalten</button><button type="button" class="ed-wirklich" id="frage-fz-ja">Ja, entfernen</button></div>
       </div>
     </div>
+    <h3>Foto-Erkennung</h3>
+    <div class="karte" style="margin-top:0">
+      <label class="zeile"><span class="bez">API-Schlüssel</span><span class="feld"><input type="password" class="text" id="e-apikey" placeholder="optional" autocomplete="off" spellcheck="false"></span></label>
+    </div>
+    <p class="erklaerung" id="e-apikey-text">Zapfsäulen-Fotos werden zuerst offline gelesen. Nur wenn das unsicher ist und hier ein Anthropic-API-Schlüssel steht, geht das Foto an das Claude-Bildmodell (etwa 1 Cent je Foto, über dein Anthropic-Konto). Der Schlüssel bleibt auf diesem Gerät und ist nicht Teil der Sicherung.</p>
     <h3>Daten</h3>
     <div class="aktionen" style="margin-top:0">
       <button type="button" class="sekundaer" id="btn-export">Sicherung exportieren</button>
@@ -508,7 +516,8 @@ const BILD = {
 };
 const $ = id => document.getElementById(id);
 document.querySelectorAll('img[data-bild]').forEach(i => { i.src = BILD[i.dataset.bild]; });
-const SCHL = { eintraege: 'tankbuch.eintraege', einst: 'tankbuch.einstellungen', entwurf: 'tankbuch.entwurf', gesehen: 'tankbuch.gesehen' };
+const SCHL = { eintraege: 'tankbuch.eintraege', einst: 'tankbuch.einstellungen', entwurf: 'tankbuch.entwurf', gesehen: 'tankbuch.gesehen',
+               apikey: 'tankbuch.apikey' };   // apikey: nur lokal, bewusst nicht in einst (sonst landet er im Export)
 const nfCache = {};
 function fmt(x, dec){
   if (x == null || !isFinite(x)) return '–';
@@ -799,174 +808,301 @@ window.addEventListener('resize', () => { clearTimeout(messTimer); messTimer = s
 if (window.visualViewport) window.visualViewport.addEventListener('resize', () => { clearTimeout(messTimer); messTimer = setTimeout(passeGroesseAn, 150); });
 window.addEventListener('orientationchange', () => setTimeout(passeGroesseAn, 250));
 
-// ---------- Zapfsäulen-Foto (offline, ohne KI: 7-Segment-Ziffern abtasten) ----------
-function leseZapfsaeule(img){
-  const W = img.width, H = img.height, d = img.data;
-  const lum = new Float32Array(W * H);
-  const weiss = new Uint8Array(W * H);
-  // Weißabgleich: je Kanal das 98-%-Quantil auf 245 ziehen (Kunstlicht, Dämmerung, Farbstich)
-  const q = [0, 1, 2].map(c => { const hist = new Uint32Array(256);
-    for (let p = c; p < d.length; p += 16) hist[d[p]]++;
-    let n = 0, ziel = (d.length / 16) * 0.98; for (let v = 0; v < 256; v++){ n += hist[v]; if (n >= ziel) return Math.max(v, 40); } return 255; });
-  const k = q.map(v => 245 / v);
-  for (let i = 0, p = 0; i < W * H; i++, p += 4){
-    const r = Math.min(255, d[p] * k[0]), g = Math.min(255, d[p + 1] * k[1]), b = Math.min(255, d[p + 2] * k[2]);
-    lum[i] = 0.299 * r + 0.587 * g + 0.114 * b;
-    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-    // LCD-Hintergrund: hell, fast farblos, nicht gelblich (Gehäuse ist cremefarben)
-    weiss[i] = (mn > 160 && mx - mn < 28 && b >= r - 6) ? 1 : 0;
+// ---------- Zapfsäulen-Foto (offline, ohne KI: 7-Segment-Ziffern abtasten; v4.9 farbunabhängig) ----------
+// Ein Durchgang: Graustufen → lokale Schwelle (Integralbild) → Segmente → Ziffern → Zeilen.
+function grundbild(img, hell){
+  const W = img.width, H = img.height, d = img.data, N = W * H;
+  const L = new Float32Array(N);
+  for (let i = 0, p = 0; i < N; i++, p += 4){
+    const v = 0.299 * d[p] + 0.587 * d[p + 1] + 0.114 * d[p + 2];
+    L[i] = hell ? 255 - v : v;                           // helle Ziffern: umkehren, dann wie dunkle behandeln
   }
-  // 1) LCD-Flächen: Zusammenhangskomponenten der weißen Maske auf 1/4 Auflösung
-  const s = 4, w = Math.floor(W / s), h = Math.floor(H / s);
-  const m = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
-    let n = 0;
-    for (let yy = 0; yy < s; yy++) for (let xx = 0; xx < s; xx++) n += weiss[(y * s + yy) * W + x * s + xx];
-    m[y * w + x] = n >= s * s / 2 ? 1 : 0;
+  const I = new Float64Array((W + 1) * (H + 1));         // Integralbild für den lokalen Mittelwert
+  for (let y = 0; y < H; y++){
+    let zeile = 0;
+    for (let x = 0; x < W; x++){ zeile += L[y * W + x]; I[(y + 1) * (W + 1) + x + 1] = I[y * (W + 1) + x + 1] + zeile; }
   }
-  const flaechen = komponenten(m, w, h, 1).filter(k => k.n > w * h * 0.002)
-    .map(k => ({ x0: k.x0 * s, y0: k.y0 * s, x1: (k.x1 + 1) * s, y1: (k.y1 + 1) * s, n: k.n * s * s,
-                 fuell: k.n / ((k.x1 - k.x0 + 1) * (k.y1 - k.y0 + 1)) }))
-    .filter(f => f.fuell > 0.35 && (f.x1 - f.x0) > (f.y1 - f.y0) * 1.2)
-    .sort((a, b) => b.n - a.n);
-  const zeilen = [];
-  for (const f of flaechen.slice(0, 3)) zeilen.push(...leseFlaeche(f));
-  return { flaechen, zeilen };
-
-  function leseFlaeche(f0){
-    // Rand zugeben: Maske endet oft vor der Glaskante, Ziffern am Rand sonst abgeschnitten
-    const px = Math.round((f0.x1 - f0.x0) * 0.06), py = Math.round((f0.y1 - f0.y0) * 0.06);
-    const f = { x0: Math.max(0, f0.x0 - px), y0: Math.max(0, f0.y0 - py), x1: Math.min(W, f0.x1 + px), y1: Math.min(H, f0.y1 + py) };
-    const fw = f.x1 - f.x0, fh = f.y1 - f.y0;
-    // Schwelle: Mitte zwischen Hintergrund (Median) und dunkelstem Prozent
-    const werte = [];
-    for (let y = f.y0; y < f.y1; y += 2) for (let x = f.x0; x < f.x1; x += 2) werte.push(lum[y * W + x]);
-    werte.sort((a, b) => a - b);
-    const dunkel = werte[Math.floor(werte.length * 0.01)], hell = werte[Math.floor(werte.length * 0.5)];
-    const schw = (dunkel + hell) / 2;
-    const dm = new Uint8Array(fw * fh);
-    for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) dm[y * fw + x] = lum[(f.y0 + y) * W + f.x0 + x] < schw ? 1 : 0;
-    // Segmente einer Ziffer verbinden: senkrecht/waagrecht weiten (Lücken zwischen Segmenten schließen)
-    // senkrecht stark, waagrecht kaum weiten: Segmente einer Ziffer verbinden, Komma bleibt getrennt
-    const r = Math.max(2, Math.round(fh * 0.012)), rx = Math.max(1, Math.round(fh * 0.003));
-    const dil = weite(dm, fw, fh, rx, r);
-    let teile = komponenten(dil, fw, fh, 1).filter(k => (k.y1 - k.y0) > fh * 0.08);
-    // Rand-Artefakte (Rahmen der Fläche) weg
-    teile = teile.filter(k => k.x0 > 1 && k.y0 > 1 && k.x1 < fw - 2 && k.y1 < fh - 2);
-    if (!teile.length) return [];
-    // Zeilen nach Höhe gruppieren: gleiche Höhe ±25 % und überlappende y-Bereiche
-    teile.sort((a, b) => a.x0 - b.x0);
-    const gruppen = [];
-    for (const k of teile){
-      const kh = k.y1 - k.y0, ym = (k.y0 + k.y1) / 2;
-      let g = gruppen.find(g => Math.abs(g.h - kh) < g.h * 0.25 && Math.abs(g.ym - ym) < g.h * 0.6);
-      if (!g){ g = { h: kh, ym, k: [] }; gruppen.push(g); }
-      g.k.push(k); g.ym = (g.ym * (g.k.length - 1) + ym) / g.k.length;
+  return { W, H, L, I };
+}
+function leseZapfsaeule(gb, opt){
+  const { W, H, L, I } = gb, N = W * H;
+  const r = Math.max(4, Math.round(Math.min(W, H) * opt.fenster));
+  const m = new Uint8Array(N);
+  for (let y = 0; y < H; y++){
+    const y0 = Math.max(0, y - r), y1 = Math.min(H, y + r + 1);
+    for (let x = 0; x < W; x++){
+      const x0 = Math.max(0, x - r), x1 = Math.min(W, x + r + 1);
+      const s = I[y1 * (W + 1) + x1] - I[y0 * (W + 1) + x1] - I[y1 * (W + 1) + x0] + I[y0 * (W + 1) + x0];
+      const mittel = s / ((x1 - x0) * (y1 - y0)), v = L[y * W + x];
+      m[y * W + x] = (v < mittel * (1 - opt.t) && mittel - v > 10) ? 1 : 0;
     }
-    return gruppen.filter(g => g.k.length >= 3).sort((a, b) => a.ym - b.ym).map(g => {
-      const boxen = g.k.map(k => ({ x0: k.x0 + rx, y0: k.y0 + r, x1: k.x1 - rx, y1: k.y1 - r }));
-      const hoehe = Math.max(...boxen.map(b => b.y1 - b.y0));
-      const ziffern = boxen.map(b => ziffer(dm, fw, b, hoehe)).join('');
-      return { ziffern, boxen: boxen.map(b => ({ x0: b.x0 + f.x0, y0: b.y0 + f.y0, x1: b.x1 + f.x0, y1: b.y1 + f.y0 })) };
-    });
   }
+  rahmenWeg(m, W, H);
+  // Segmente = Zusammenhangskomponenten; zu kleine (Rauschen) und zu große (Flächen) weg
+  const kompo = komponenten(m, W, H).filter(k => k.n >= 6 && (k.x1 - k.x0) < W * 0.4 && (k.y1 - k.y0) < H * 0.4);
+  // Segmente einer Ziffer zusammenführen: Kästen um 12 % ihrer Größe weiten, überlappende vereinen
+  const n = kompo.length, eltern = kompo.map((_, i) => i);
+  const wurzel = i => { while (eltern[i] !== i){ eltern[i] = eltern[eltern[i]]; i = eltern[i]; } return i; };
+  const ex = kompo.map(k => { const e = 0.08 * Math.max(k.x1 - k.x0, k.y1 - k.y0) + 1;
+    return { x0: k.x0 - e, x1: k.x1 + e, y0: k.y0 - e, y1: k.y1 + e }; });
+  const gr = kompo.map(k => Math.max(k.x1 - k.x0, k.y1 - k.y0) + 1);
+  const ord = kompo.map((_, i) => i).sort((a, b) => ex[a].x0 - ex[b].x0);
+  for (let a = 0; a < n; a++){
+    const i = ord[a];
+    for (let b = a + 1; b < n; b++){
+      const j = ord[b];
+      if (ex[j].x0 > ex[i].x1) break;
+      if (ex[j].y0 > ex[i].y1 || ex[j].y1 < ex[i].y0) continue;
+      if (gr[i] > gr[j] * 2.2 || gr[j] > gr[i] * 2.2) continue;     // Rahmen oder Text nicht mit Segmenten verschmelzen
+      eltern[wurzel(i)] = wurzel(j);
+    }
+  }
+  const roh = new Map();
+  kompo.forEach((k, i) => { const w = wurzel(i); if (!roh.has(w)) roh.set(w, []); roh.get(w).push(k); });
+  // Kasten nur aus den großen Teilen bilden: Komma/Punkt (klein, unten) verfälscht sonst die Ziffer
+  const gruppen = new Map();
+  for (const [w, ks] of roh){
+    const h = Math.max(...ks.map(k => k.y1)) - Math.min(...ks.map(k => k.y0)) + 1;
+    const gross = ks.filter(k => Math.max(k.x1 - k.x0, k.y1 - k.y0) + 1 >= h * 0.3);
+    const g = { x0: 1e9, y0: 1e9, x1: -1, y1: -1, n: 0, teile: 0 };
+    for (const k of (gross.length ? gross : ks)){
+      g.x0 = Math.min(g.x0, k.x0); g.y0 = Math.min(g.y0, k.y0); g.x1 = Math.max(g.x1, k.x1); g.y1 = Math.max(g.y1, k.y1);
+      g.n += k.n; g.teile++;
+    }
+    gruppen.set(w, g);
+  }
+  // Ziffern-Kandidaten: hoch genug, schmal genug; zu breite Blöcke an der dünnsten Spalte teilen
+  let ziff = [];
+  for (const g0 of gruppen.values()) for (const g of hochTeilen(m, W, g0)){
+    const h = g.y1 - g.y0 + 1, w = g.x1 - g.x0 + 1;
+    if (h < 12 || h > H * 0.5) continue;
+    if (g.n !== undefined && g.n / (w * h) < 0.08) continue;          // hohle Rahmen
+    if (w / h <= 1.05){ if (w / h >= 0.1) ziff.push(g); continue; }
+    if (w / h > 4) continue;
+    ziff.push(...breitTeilen(m, W, g, Math.round(w / (0.62 * h))));
+  }
+  // Zeilen: gleiche Höhe (±22 %), gleiche Grundlinie, Abstand höchstens 1,3 Ziffernhöhen
+  ziff.sort((a, b) => a.x0 - b.x0);
+  const zeilen = [];
+  for (const z of ziff){
+    const h = z.y1 - z.y0 + 1, ym = (z.y0 + z.y1) / 2;
+    const zl = zeilen.find(r => Math.abs(r.h - h) < r.h * 0.22 && Math.abs(r.ym - ym) < r.h * 0.3 && z.x0 - r.x1 < r.h * 1.3);
+    if (zl){ zl.z.push(z); zl.x1 = Math.max(zl.x1, z.x1); zl.ym = (zl.ym * (zl.z.length - 1) + ym) / zl.z.length; }
+    else zeilen.push({ h, ym, x0: z.x0, x1: z.x1, z: [z] });
+  }
+  // Ober-/Unterkante je Zeile als Gerade durch die vollen Ziffern: fehlende Segmente und Schräglage ausgleichen
+  for (const r of zeilen){
+    const voll = r.z.filter(z => z.y1 - z.y0 + 1 >= r.h * 0.85);
+    const gerade = key => {
+      const xs = voll.map(z => (z.x0 + z.x1) / 2), ys = voll.map(z => z[key]);
+      const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
+      let sxy = 0, sxx = 0; xs.forEach((x, i) => { sxy += (x - mx) * (ys[i] - my); sxx += (x - mx) ** 2; });
+      const b = sxx > 0 && voll.length >= 3 ? sxy / sxx : 0;
+      return x => Math.round(my + b * (x - mx));
+    };
+    if (!voll.length) continue;
+    const oben = gerade('y0'), unten = gerade('y1');
+    r.z = r.z.map(z => { const xm = (z.x0 + z.x1) / 2; return { x0: z.x0, x1: z.x1, y0: Math.max(0, oben(xm)), y1: Math.min(H - 1, unten(xm)) }; });
+  }
+  return zeilen.filter(r => r.z.length >= 3).map(r => ({
+    ziffern: r.z.map(z => ziffer(m, W, z)).join(''), y: r.ym, h: r.h, x0: r.x0, x1: r.x1,
+    boxen: r.z.map(z => ({ x0: z.x0, y0: z.y0, x1: z.x1, y1: z.y1 }))
+  })).sort((a, b) => a.y - b.y);
 }
 
-// Eine Ziffer aus 7 Segmenten: in Streifen quer zum Segment nach dunklen Pixeln suchen.
-function ziffer(dm, fw, b, hoehe){
-  const bw = b.x1 - b.x0 + 1, bh = b.y1 - b.y0 + 1;
-  if (bw < bh * 0.35) return '1';                          // schmal = "1" (nur rechte Segmente)
-  const an = (fx0, fx1, fy0, fy1) => {
-    let n = 0, t = 0;
-    for (let y = Math.round(b.y0 + fy0 * bh); y <= b.y0 + fy1 * bh; y++)
-      for (let x = Math.round(b.x0 + fx0 * bw); x <= b.x0 + fx1 * bw; x++){ t++; n += dm[y * fw + x]; }
-    return t ? n / t > 0.12 : false;
-  };
-  const seg = {
-    a: an(0.30, 0.80, 0.00, 0.12), d: an(0.20, 0.70, 0.88, 1.00), g: an(0.30, 0.70, 0.44, 0.56),
-    f: an(0.00, 0.35, 0.18, 0.38), b: an(0.65, 1.00, 0.18, 0.38),
-    e: an(0.00, 0.35, 0.62, 0.82), c: an(0.65, 1.00, 0.62, 0.82)
-  };
-  const code = 'abcdefg'.split('').map(k => seg[k] ? 1 : 0).join('');
-  const tab = { '1111110': '0', '0110000': '1', '1101101': '2', '1111001': '3', '0110011': '4', '1011011': '5',
-                '1011111': '6', '1110000': '7', '1110010': '7', '1111111': '8', '1111011': '9', '0011111': '6', '1110011': '9' };
-  return tab[code] || '?';
+// Zwei eng übereinander stehende Zeilen verschmolzen: waagerecht an der dünnsten Zeile teilen
+function hochTeilen(m, W, g){
+  const h = g.y1 - g.y0 + 1, w = g.x1 - g.x0 + 1;
+  if (h / w < 2.4 || w / h < 0.25) return [g];
+  const zl = new Uint32Array(h);
+  for (let y = g.y0; y <= g.y1; y++) for (let x = g.x0; x <= g.x1; x++) zl[y - g.y0] += m[y * W + x];
+  let best = Math.round(h * 0.3); for (let y = best; y <= h * 0.7; y++) if (zl[y] < zl[best]) best = y;
+  return [{ x0: g.x0, x1: g.x1, y0: g.y0, y1: g.y0 + best - 1 }, { x0: g.x0, x1: g.x1, y0: g.y0 + best + 1, y1: g.y1 }].flatMap(t => hochTeilen(m, W, t));
 }
 
-function weite(m, w, h, rx, ry){
-  const t = new Uint8Array(w * h), o = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++){ let last = -1e9;
-    for (let x = 0; x < w; x++){ if (m[y * w + x]) last = x; if (x - last <= rx) t[y * w + x] = 1; }
-    last = 1e9; for (let x = w - 1; x >= 0; x--){ if (m[y * w + x]) last = x; if (last - x <= rx) t[y * w + x] = 1; } }
-  for (let x = 0; x < w; x++){ let last = -1e9;
-    for (let y = 0; y < h; y++){ if (t[y * w + x]) last = y; if (y - last <= ry) o[y * w + x] = 1; }
-    last = 1e9; for (let y = h - 1; y >= 0; y--){ if (t[y * w + x]) last = y; if (last - y <= ry) o[y * w + x] = 1; } }
-  return o;
+// Zu breiten Block in k Ziffern teilen: Schnitt jeweils an der Spalte mit den wenigsten Pixeln nahe der Sollstelle
+function breitTeilen(m, W, g, k){
+  if (k < 2) return [g];
+  const w = g.x1 - g.x0 + 1, sp = new Uint32Array(w);
+  for (let y = g.y0; y <= g.y1; y++) for (let x = g.x0; x <= g.x1; x++) sp[x - g.x0] += m[y * W + x];
+  const schnitte = [];
+  for (let i = 1; i < k; i++){
+    const soll = Math.round(i * w / k), r = Math.round(w / k * 0.3);
+    let best = soll; for (let x = Math.max(1, soll - r); x <= Math.min(w - 2, soll + r); x++) if (sp[x] < sp[best]) best = x;
+    schnitte.push(best);
+  }
+  const aus = []; let a = 0;
+  for (const s of [...schnitte, w]){ aus.push({ x0: g.x0 + a, x1: g.x0 + s - 1, y0: g.y0, y1: g.y1 }); a = s + 1; }
+  return aus.filter(z => z.x1 - z.x0 >= 2);
 }
 
-function komponenten(m, w, h, wert){
+// Eine Ziffer: Anteil dunkler Pixel in den 7 Segmentfeldern, Kursiv-Schräge mitprobieren
+const CODES = { '1111110': '0', '0110000': '1', '1101101': '2', '1111001': '3', '0110011': '4', '1011011': '5',
+                '1011111': '6', '0011111': '6', '1110000': '7', '1110010': '7', '1111111': '8', '1111011': '9', '1110011': '9' };
+const SEGM = { a: [0.28, 0.72, 0.00, 0.13], b: [0.72, 1.00, 0.14, 0.42], c: [0.72, 1.00, 0.58, 0.86],
+               d: [0.28, 0.72, 0.87, 1.00], e: [0.00, 0.28, 0.58, 0.86], f: [0.00, 0.28, 0.14, 0.42], g: [0.28, 0.72, 0.43, 0.57] };
+function ziffer(m, W, z){
+  const w = z.x1 - z.x0 + 1, h = z.y1 - z.y0 + 1;
+  if (w / h < 0.42) return '1';
+  let best = null;
+  for (const s of [0, 0.08, 0.16, 0.24]){
+    const bw = w - s * h; if (bw < h * 0.3) continue;
+    let code = '', sicher = 0;
+    for (const k of 'abcdefg'){
+      const [u0, u1, v0, v1] = SEGM[k]; let n = 0, t = 0;
+      for (let y = Math.round(z.y0 + v0 * (h - 1)); y <= z.y0 + v1 * (h - 1); y++){
+        const versatz = s * (z.y1 - y);
+        for (let x = Math.round(z.x0 + versatz + u0 * (bw - 1)); x <= z.x0 + versatz + u1 * (bw - 1); x++){ t++; n += m[y * W + x]; }
+      }
+      const f = t ? n / t : 0;
+      code += f > 0.28 ? '1' : '0'; sicher += Math.abs(f - 0.28);
+    }
+    const zf = CODES[code];
+    if (zf && (!best || sicher > best.sicher)) best = { zf, sicher };
+  }
+  return best ? best.zf : '?';
+}
+function komponenten(m, w, h, labRaus){
   const lab = new Int32Array(w * h), aus = [], st = [];
   for (let i = 0; i < w * h; i++){
-    if (m[i] !== wert || lab[i]) continue;
-    const k = { n: 0, x0: 1e9, y0: 1e9, x1: -1, y1: -1 }; lab[i] = aus.length + 1; st.push(i);
+    if (!m[i] || lab[i]) continue;
+    const id = aus.length + 1, k = { n: 0, x0: 1e9, y0: 1e9, x1: -1, y1: -1, id }; lab[i] = id; st.push(i);
     while (st.length){
       const j = st.pop(), x = j % w, y = (j - x) / w; k.n++;
       if (x < k.x0) k.x0 = x; if (x > k.x1) k.x1 = x; if (y < k.y0) k.y0 = y; if (y > k.y1) k.y1 = y;
-      if (x > 0 && m[j - 1] === wert && !lab[j - 1]){ lab[j - 1] = lab[i]; st.push(j - 1); }
-      if (x < w - 1 && m[j + 1] === wert && !lab[j + 1]){ lab[j + 1] = lab[i]; st.push(j + 1); }
-      if (y > 0 && m[j - w] === wert && !lab[j - w]){ lab[j - w] = lab[i]; st.push(j - w); }
-      if (y < h - 1 && m[j + w] === wert && !lab[j + w]){ lab[j + w] = lab[i]; st.push(j + w); }
+      if (x > 0 && m[j - 1] && !lab[j - 1]){ lab[j - 1] = id; st.push(j - 1); }
+      if (x < w - 1 && m[j + 1] && !lab[j + 1]){ lab[j + 1] = id; st.push(j + 1); }
+      if (y > 0 && m[j - w] && !lab[j - w]){ lab[j - w] = id; st.push(j - w); }
+      if (y < h - 1 && m[j + w] && !lab[j + w]){ lab[j + w] = id; st.push(j + w); }
     }
     aus.push(k);
   }
+  if (labRaus) labRaus.lab = lab;
   return aus;
 }
 
-// Ganzer Ablauf: mehrere Drehwinkel probieren, nur ein in sich stimmiges Ergebnis zählt.
-function erkenneZapfsaeule(bild){
-  const winkel = [0, -3, 3, -6, 6, -9, 9];
-  let bestes = null;
-  for (const a of winkel){
-    const c = document.createElement('canvas'); c.width = bild.width; c.height = bild.height;
-    const x = c.getContext('2d');
-    x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height);
-    x.translate(c.width / 2, c.height / 2); x.rotate(a * Math.PI / 180); x.drawImage(bild, -c.width / 2, -c.height / 2);
-    const r = leseZapfsaeule(x.getImageData(0, 0, c.width, c.height));
-    const w = deute(r.zeilen.map(z => z.ziffern));
-    if (w && w.stimmt) return Object.assign(w, { winkel: a });
-    if (w && !bestes) bestes = Object.assign(w, { winkel: a });
+// Rahmen, die Ziffern berühren: bei hohlen Komponenten lange gerade Läufe löschen, damit die Ziffern frei werden
+function rahmenWeg(m, W, H){
+  const raus = {}, kompo = komponenten(m, W, H, raus), lab = raus.lab;
+  let geaendert = false;
+  for (const k of kompo){
+    const w = k.x1 - k.x0 + 1, h = k.y1 - k.y0 + 1;
+    if (Math.max(w, h) < 30 || k.n / (w * h) >= 0.15) continue;
+    geaendert = true;
+    for (let y = k.y0; y <= k.y1; y++){
+      let a = -1;
+      for (let x = k.x0; x <= k.x1 + 1; x++){
+        const an = x <= k.x1 && lab[y * W + x] === k.id;
+        if (an && a < 0) a = x;
+        if (!an && a >= 0){ if (x - a >= w * 0.5) for (let q = a; q < x; q++) m[y * W + q] = 0; a = -1; }
+      }
+    }
+    for (let x = k.x0; x <= k.x1; x++){
+      let a = -1;
+      for (let y = k.y0; y <= k.y1 + 1; y++){
+        const an = y <= k.y1 && lab[y * W + x] === k.id;
+        if (an && a < 0) a = y;
+        if (!an && a >= 0){ if (y - a >= h * 0.5) for (let q = a; q < y; q++) m[q * W + x] = 0; a = -1; }
+      }
+    }
   }
-  return bestes;                              // nicht stimmig: Werte nur als Vorschlag
+  return geaendert;
 }
-// Zeilen deuten: zwei Zeilen mit 2 Nachkommastellen (Betrag, Liter), eine mit 1 (Preis in ct)
-function deute(z){
-  // je Zeile die längste Ziffernfolge: Beschriftungen („Liter:“) und Einheiten (€, /L) fallen als „?“ weg
-  const n = z.map(s => (s.match(/\d{3,7}/g) || []).sort((a, b) => b.length - a.length)[0]).filter(Boolean);
-  if (n.length < 3) return null;
-  const wert = (i, j, k) => {
-    const betrag = +n[i] / 100, liter = +n[j] / 100, preis = +n[k] / 1000;   // 2139 bzw. 1949 → 2,139 / 1,949 €/l
-    const stimmt = liter > 0 && preis > 0.5 && preis < 4 && Math.abs(betrag - liter * preis) <= 0.011;
-    return { betrag, liter, preis, stimmt };
-  };
-  // Reihenfolge je Säule verschieden – Kreuzprüfung filtert, Plausibilität entscheidet.
-  // Achtung: Liter und Preis vertauscht ergibt dasselbe Produkt (3473/100 · 2139/1000 = 2139/100 · 3473/1000).
-  const kandidaten = [];
-  for (let i = 0; i < n.length; i++) for (let j = 0; j < n.length; j++) for (let k = 0; k < n.length; k++){
-    if (i === j || j === k || i === k) continue;
-    const w = wert(i, j, k); if (!w.stimmt) continue;
-    const kurz = Math.min(...[i, j, k].map(x => n[x].length));
-    w.punkte = (n[k].length === kurz ? 2 : 0)                                  // Preis: kürzeste Zahl (keine führenden Nullen)
-             + (n[i].length === n[j].length ? 1 : 0)                          // Betrag und Liter gleich breit
-             + (w.preis >= 1 && w.preis <= 3 ? 1 : 0)                          // übliche Spritpreise
-             + (k === n.length - 1 ? 0.5 : 0)                                    // Literpreis steht unten
-             + (i === 0 && j === 1 && k === 2 ? 0.25 : 0);                    // Aral-Reihenfolge bevorzugt
-    kandidaten.push(w);
+
+// Ganzer Ablauf: je Drehwinkel die Zeilen aller Varianten (Polarität, Fenster, Schwelle) sammeln und deuten.
+function erkenneZapfsaeule(bild){
+  const f = Math.min(3, 1000 / Math.max(bild.width, bild.height));        // auf 1000 px bringen (kleine Bilder vergrößern)
+  const W = Math.round(bild.width * f), H = Math.round(bild.height * f);
+  let vorschlag = null;
+  for (const a of [0, -5, 5]){
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d');
+    x.fillStyle = '#808080'; x.fillRect(0, 0, W, H);
+    x.translate(W / 2, H / 2); x.rotate(a * Math.PI / 180); x.drawImage(bild, -W / 2, -H / 2, W, H);
+    const daten = x.getImageData(0, 0, W, H), zeilen = [];
+    for (const hell of [false, true]){
+      const gb = grundbild(daten, hell);
+      for (const fenster of [0.025, 0.06, 0.12]) for (const t of [0.12, 0.25]) zeilen.push(...leseZapfsaeule(gb, { fenster, t }));
+    }
+    const e = deuteZeilen(zeilen);
+    if (e && e.stimmt) return Object.assign(e, { winkel: a });
+    if (e && !vorschlag) vorschlag = e;
   }
-  if (!kandidaten.length) return wert(0, 1, 2);
-  kandidaten.sort((a, b) => b.punkte - a.punkte);
-  const [a, b] = kandidaten;
-  if (b && b.punkte === a.punkte && (b.liter !== a.liter || b.preis !== a.preis)) return Object.assign(a, { stimmt: false });   // nicht eindeutig
-  return a;
+  return vorschlag;
+}
+
+// Zeilen deuten nach der Lage auf echten Säulen: Betrag über Liter (beide rechtsbündig), Literpreis darunter.
+// Nur ganz gelesene Zeilen (höchstens ein „?“ am Rand), Betrag = Liter × Preis (±1,1 ct).
+function deuteZeilen(zeilen){
+  const z = [];
+  for (const r of zeilen){
+    const s = r.ziffern.replace(/^\?/, '').replace(/\?$/, '');
+    if (!/^\d{3,7}$/.test(s)) continue;
+    if (z.some(q => q.s === s && Math.abs(q.y - r.y) < r.h * 0.5 && Math.abs(q.x1 - r.x1) < r.h)) continue;   // doppelt
+    z.push({ s, y: r.y, h: r.h, x1: r.x1 });
+  }
+  let best = null, zweit = null;
+  for (const B of z) for (const L of z){
+    if (L.y - B.y < Math.min(B.h, L.h) * 0.6) continue;                       // Liter unter Betrag
+    if (Math.abs(B.x1 - L.x1) > Math.max(B.h, L.h) * 0.8) continue;            // rechtsbündig in einer Anzeige
+    const betrag = +B.s / 100, liter = +L.s / 100;
+    if (betrag < 1 || liter < 1) continue;
+    for (const P of z){
+      if (P.y - L.y < Math.min(P.h, L.h) * 0.6) continue;                     // Literpreis darunter
+      const preis = +P.s / 1000;                                               // 2139 bzw. 1949 → 2,139 / 1,949 €/l
+      if (preis < 0.8 || preis > 3.5 || Math.abs(betrag - liter * preis) > 0.011) continue;
+      const punkte = (P.h < L.h * 0.9 ? 1 : 0) + (P.s.length <= L.s.length ? 1 : 0) + (B.s.length === L.s.length ? 1 : 0)
+                   - Math.abs(betrag - liter * preis) * 10;
+      const w = { betrag, liter, preis, stimmt: true, punkte };
+      if (!best || punkte > best.punkte){ if (best && (best.liter !== liter || best.preis !== preis)) zweit = best; best = w; }
+      else if (best.liter !== liter || best.preis !== preis) zweit = !zweit || punkte > zweit.punkte ? w : zweit;
+    }
+  }
+  if (best && zweit && zweit.punkte === best.punkte) return Object.assign(best, { stimmt: false });   // nicht eindeutig
+  return best;
+}
+
+// ---------- Rückfallebene: Claude-Bildmodell mit eigenem API-Schlüssel (nur wenn offline unsicher) ----------
+const BILDMODELL = 'claude-opus-5-5';
+const SDK_URL = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.3.0/+esm';
+const FOTO_SCHEMA = { type: 'object', additionalProperties: false, required: ['lesbar', 'betrag', 'liter', 'preis_pro_liter'],
+  properties: { lesbar: { type: 'boolean' }, betrag: { type: 'number' }, liter: { type: 'number' }, preis_pro_liter: { type: 'number' } } };
+const FOTO_AUFTRAG = 'Das Foto zeigt die Anzeige einer Zapfsäule nach dem Tanken. Lies drei Werte ab: den zu zahlenden Betrag in Euro, ' +
+  'die abgegebene Menge in Litern und den Preis je Liter. Gib den Preis je Liter in Euro an (die Anzeige „213,9 ct“ bedeutet 2,139). ' +
+  'Wenn eine der drei Zahlen nicht eindeutig lesbar ist oder das Foto keine Zapfsäulenanzeige zeigt, setze lesbar auf false ' +
+  'und alle Zahlen auf 0. Rate nicht.';
+function ladeSchluessel(){ try { return localStorage.getItem(SCHL.apikey) || ''; } catch (_){ return ''; } }
+async function frageBildmodell(quelle, schluessel){
+  let Anthropic;
+  try { Anthropic = (await import(SDK_URL)).default; }
+  catch (_){ return { stimmt: false, fehler: 'Bildmodell nicht erreichbar (kein Netz?)' }; }
+  try {
+    const f = Math.min(1, 1200 / Math.max(quelle.width, quelle.height));      // 1200 px reichen, spart Token
+    const c = document.createElement('canvas');
+    c.width = Math.round(quelle.width * f); c.height = Math.round(quelle.height * f);
+    c.getContext('2d').drawImage(quelle, 0, 0, c.width, c.height);
+    const client = new Anthropic({ apiKey: schluessel, dangerouslyAllowBrowser: true });   // Schlüssel liegt nur auf diesem Gerät
+    const antwort = await client.beta.messages.create({
+      model: BILDMODELL, max_tokens: 4000,
+      betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default',
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: FOTO_SCHEMA } },
+      messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.85).split(',')[1] } },
+        { type: 'text', text: FOTO_AUFTRAG } ] }]
+    });
+    if (antwort.stop_reason === 'refusal') return { stimmt: false, fehler: 'Bildmodell hat abgelehnt' };
+    const text = antwort.content.find(b => b.type === 'text');
+    const w = text ? JSON.parse(text.text) : null;
+    if (!w || !w.lesbar) return { stimmt: false, quelle: 'Bildmodell' };
+    const betrag = Math.round(w.betrag * 100) / 100, liter = Math.round(w.liter * 100) / 100, preis = Math.round(w.preis_pro_liter * 1000) / 1000;
+    const stimmt = liter >= 1 && preis > 0.5 && preis < 4 && Math.abs(betrag - liter * preis) <= 0.011;   // dieselbe Kreuzprüfung wie offline
+    return { betrag, liter, preis, stimmt, quelle: 'Bildmodell' };
+  } catch (err){
+    if (err instanceof Anthropic.AuthenticationError) return { stimmt: false, fehler: 'API-Schlüssel ungültig' };
+    if (err instanceof Anthropic.RateLimitError) return { stimmt: false, fehler: 'Bildmodell ausgelastet, später nochmal' };
+    if (err instanceof Anthropic.APIError) return { stimmt: false, fehler: 'Bildmodell-Fehler ' + (err.status || '') };
+    return { stimmt: false, fehler: 'Bildmodell nicht erreichbar (kein Netz?)' };
+  }
 }
 
 // Foto der Zapfsäule: Liter und Betrag nur übernehmen, wenn Betrag = Liter × Preis aufgeht
@@ -986,7 +1122,13 @@ fFoto.addEventListener('change', async () => {
     c.width = Math.round(im.naturalWidth * f); c.height = Math.round(im.naturalHeight * f);
     c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
     await new Promise(r => setTimeout(r, 30));                                   // Banner erst zeichnen lassen
-    zeigeFotoErgebnis(erkenneZapfsaeule(c) || { stimmt: false });
+    const e = erkenneZapfsaeule(c);
+    const schluessel = ladeSchluessel();
+    if (e && e.stimmt) zeigeFotoErgebnis(Object.assign(e, { quelle: 'offline' }));
+    else if (schluessel){
+      showInfo('Offline unsicher – frage das Bildmodell …', 0);
+      zeigeFotoErgebnis(await frageBildmodell(c, schluessel));
+    } else zeigeFotoErgebnis(e || { stimmt: false });
   } catch (_){ zeigeFotoErgebnis({ stimmt: false }); }
   finally { URL.revokeObjectURL(url); }
 });
@@ -1001,11 +1143,19 @@ function zeigeFotoErgebnis(e){
   const p = $('fk-pruef');
   p.classList.toggle('schlecht', !e.stimmt);
   p.textContent = e.stimmt ? '✓ ' + fmt(e.liter, 2) + ' l × ' + fmt(e.preis, 3) + ' €/l = ' + fmt(e.betrag, 2) + ' €'
+    : e.fehler ? e.fehler + ' – bitte von Hand eintragen.'
     : (da ? 'Liter × Preis ergibt nicht den Betrag – bitte von Hand eintragen.' : 'Keine Zapfsäulen-Anzeige gefunden – bitte von Hand eintragen.');
+  $('fk-quelle').textContent = e.quelle === 'Bildmodell' ? 'vom Claude-Bildmodell gelesen' : e.quelle === 'offline' ? 'offline erkannt' : '';
   $('fk-uebernehmen').hidden = !e.stimmt;
   $('fk-verwerfen').textContent = e.stimmt ? 'Verwerfen' : 'Schließen';
   const dlg = $('foto-karte'); if (!dlg.open) dlg.showModal();
 }
+$('e-apikey').value = ladeSchluessel();
+$('e-apikey').addEventListener('change', () => {
+  const v = $('e-apikey').value.trim();
+  try { if (v) localStorage.setItem(SCHL.apikey, v); else localStorage.removeItem(SCHL.apikey); } catch (_){}
+  showInfo(v ? 'API-Schlüssel gespeichert' : 'API-Schlüssel gelöscht', 2);
+});
 const fotoZu = () => { fotoErgebnis = null; if ($('foto-karte').open) $('foto-karte').close(); };
 $('fk-verwerfen').addEventListener('click', fotoZu);
 $('foto-karte').addEventListener('cancel', ev => { ev.preventDefault(); fotoZu(); });          // Wischen/Esc = Verwerfen
