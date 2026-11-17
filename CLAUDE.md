@@ -96,6 +96,11 @@ Stand bei Umzug aus dem Chat: **v4.3** (Oktober 2026).
 - Plausibilitätsprüfung gegen Zahlendreher: Liter ab 66 l gibt es seit v4.4 (`LITER_HINWEIS`, Hinweis-Banner,
   zweites Speichern mit gleichem Wert übernimmt). Kilometerstand und Preis fehlen noch.
   Grenze gilt für alle Fahrzeuge gleich – bei einem zweiten Fahrzeug ggf. Tankvolumen je Fahrzeug.
-- Zapfsäulen-Leser bisher nur an einem echten Foto (Aral, LCD) entwickelt + künstliche Varianten.
-  Andere Marken/LED-Anzeigen ungetestet – neue Fotos als Testfälle sammeln. Kilometerstand per Foto fehlt.
+- Zapfsäulen-Leser an einem echten Foto (Aral) entwickelt. **Test 17.11.2026 an 17 echten Anzeigen** (Ausschnitte
+  aus Bildersuche-Screenshots, nicht im Repo wegen Urheberrecht): **0 erkannt, 0 falsch**, alle „Nicht sicher“.
+  Ursachen: Farbmaske nur für weiß-bläuliches LCD (gelbgrün, grau, blau, Amber auf Schwarz fallen raus),
+  Zeilen-/Ziffernbildung zu starr. Für echte Brauchbarkeit Neubau nötig (farbunabhängig, beide Polaritäten).
+  Befund aus allen echten Fotos: Betrag oben, Liter Mitte, Literpreis unten und kleiner; Preis meist in ct mit
+  1 Nachkommastelle (Aral, Gilbarco, Tokheim alt), sonst € mit 3 Stellen. 1 ct Abweichung kommt real vor
+  (10,00 l × 1,469 = 14,69, Anzeige 14,70). Kilometerstand per Foto fehlt.
 - iOS kürzt den Home-Bildschirm-Namen evtl. („Tankprotoko…“) – am Gerät prüfen.
